@@ -58,7 +58,7 @@ class Config(object):
 
     train_mode = True
     #softmax or rnn
-    answer_prediction = "rnn"
+    answer_prediction = p.answer_prediction
 
 
 def _add_gradient_noise(t, stddev=1e-3, name=None):
