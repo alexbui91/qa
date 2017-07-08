@@ -415,7 +415,6 @@ class Model(object):
                 feed[self.answer_len_placeholder] = al[index]
                 answers = alb[step *
                         config.batch_size:(step + 1) * config.batch_size]
-            
             loss, pred, summary, _ = session.run(
                 [self.calculate_loss, self.pred, self.merged, train_op], feed_dict=feed)
 

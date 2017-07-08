@@ -320,7 +320,6 @@ def load_babi(config, split_sentences=False):
                                            config.embedding_init, (len(ivocab), p.embed_size))
 
     inputs, questions, answers, input_masks, rel_labels = data
-
     if split_sentences:
         input_lens, sen_lens, max_sen_len = get_sentence_lens(inputs)
         max_mask_len = max_sen_len
@@ -361,7 +360,6 @@ def load_babi(config, split_sentences=False):
     rel_labels = np.zeros((len(rel_labels), len(rel_labels[0])))
     for i, tt in enumerate(rel_labels):
         rel_labels[i] = np.array(tt, dtype=int)
-
     if config.train_mode:
         #separate part of train data to valid
         if a_lens is not None:

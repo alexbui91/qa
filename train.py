@@ -11,7 +11,7 @@ import os
 from model import Model, Config
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-b", "--task_id",
+parser.add_argument("-t", "--task_id",
                     help="specify babi task 1-20 (default=1)")
 parser.add_argument("-r", "--restore",
                     help="restore previously trained weights (default=false)")
@@ -29,7 +29,6 @@ config = Config()
 if args.task_id is not None:
     config.task_id = args.task_id
 
-config.task_id = args.task_id if args.task_id is not None else str(1)
 config.l2 = args.l2_loss if args.l2_loss is not None else 0.001
 config.strong_supervision = args.strong_supervision if args.strong_supervision is not None else False
 num_runs = args.num_runs if args.num_runs is not None else 1
@@ -39,8 +38,6 @@ print('Start training DMN on babi task', config.task_id)
 best_overall_val_loss = float('inf')
 
 # create model
-
-config = Config()
 
 model = Model(config)
 
