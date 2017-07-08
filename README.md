@@ -20,8 +20,23 @@ This code has been modified with GRU cells in answer module
 | `attention_gru_cell.py` | contains a custom Attention GRU cell implementation |
 | `fetch_babi_data.sh` | shell script to fetch bAbI tasks (from [DMNs in Theano](https://github.com/YerevaNN/Dynamic-memory-networks-in-Theano)) |
 
+
+## Set up environment
+Install Tensorflow with python 2.7.x (https://www.tensorflow.org/install/)
+
+sudo apt-get install python-pip python-dev python-virtualenv
+
+virtualenv --system-site-packages tensorflow
+
+source ~/tensorflow/bin/activate
+
+pip install --upgrade tensorflow
+
+# optional if you would like to run on gpu
+pip install --upgrade tensorflow-gpu 
+
 ## Usage
-Install [TensorFlow r1.0](https://www.tensorflow.org/install/)
+
 
 Run the included shell script to fetch the data
 
