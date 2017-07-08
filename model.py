@@ -34,7 +34,7 @@ class Config(object):
     max_grad_val = 10
     noisy_grads = False
 
-    word2vec_init = True
+    word2vec_init = p.use_glove
     embedding_init = np.sqrt(3)
 
     # set to zero with strong supervision to only train gates
