@@ -1,3 +1,10 @@
-data/
+/data
+/papers
+/weights
+/summaries
+/tensorflow
+*.swp
 *.pyc
-
+*.zip
+*.xlsx
+*.gz
