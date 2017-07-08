@@ -15,12 +15,12 @@ from tensorflow.contrib.cudnn_rnn.python.ops import cudnn_rnn_ops
 import preload
 from softmax_cell import SMGRUCell
 
+import properties as p
+
 class Config(object):
     """Holds model hyperparams and data information."""
 
     batch_size = 100
-    embed_size = 100
-    hidden_size = 100
 
     max_epochs = 256
     max_answer_len = 2
@@ -100,7 +100,7 @@ class Model(object):
         # minus when perform rnn
         self.max_answer_len = self.max_answer_len + 1
         self.encoding = _position_encoding(
-            self.max_sen_len, self.config.embed_size)
+            self.max_sen_len, p.embed_size)
 
     def add_placeholders(self):
         """add data placeholder to graph"""
@@ -142,7 +142,7 @@ class Model(object):
         questions = tf.nn.embedding_lookup(
             embeddings, self.question_placeholder)
             
-        gru_cell = tf.contrib.rnn.GRUCell(self.config.hidden_size)
+        gru_cell = tf.contrib.rnn.GRUCell(p.hidden_size)
         _, q_vec = tf.nn.dynamic_rnn(gru_cell,
                                      questions,
                                      dtype=np.float32,
@@ -160,8 +160,8 @@ class Model(object):
         # (like fb represent)
         inputs = tf.reduce_sum(inputs * self.encoding, 2)
 
-        forward_gru_cell = tf.contrib.rnn.GRUCell(self.config.hidden_size)
-        backward_gru_cell = tf.contrib.rnn.GRUCell(self.config.hidden_size)
+        forward_gru_cell = tf.contrib.rnn.GRUCell(p.hidden_size)
+        backward_gru_cell = tf.contrib.rnn.GRUCell(p.hidden_size)
         # outputs with [batch_size, max_time, cell_bw.output_size]
         outputs, _ = tf.nn.bidirectional_dynamic_rnn(
             forward_gru_cell,
@@ -198,7 +198,7 @@ class Model(object):
             # feature_vec with size b x 4d
             feature_vec = tf.concat(features, 1)
             attention = tf.layers.dense(feature_vec,
-                                        self.config.embed_size,
+                                        p.embed_size,
                                         activation=tf.nn.tanh,
                                         name="layer1",
                                         reuse=reuse)
@@ -231,7 +231,7 @@ class Model(object):
         gru_inputs = tf.concat([fact_vecs, attentions], 2)
         # GRU - RNN to generate final e
         with tf.variable_scope('attention_gru', reuse=reuse):
-            _, episode = tf.nn.dynamic_rnn(AttentionGRUCell(self.config.hidden_size),
+            _, episode = tf.nn.dynamic_rnn(AttentionGRUCell(p.hidden_size),
                                            gru_inputs,
                                            dtype=np.float32,
                                            sequence_length=self.input_len_placeholder
@@ -243,7 +243,7 @@ class Model(object):
         if self.config.answer_prediction == "rnn":
             # get prediction at timestep
             y0 = tf.nn.softmax(rnn_output)
-            gru_cell = SMGRUCell(self.config.hidden_size)
+            gru_cell = SMGRUCell(p.hidden_size)
             pred_outputs, _ = tf.nn.dynamic_rnn(gru_cell,
                                         answer_embedding,
                                         dtype=np.float32,
@@ -304,7 +304,7 @@ class Model(object):
                 # untied weights for memory update
                 with tf.variable_scope("hop_%d" % i):
                     prev_memory = tf.layers.dense(tf.concat([prev_memory, episode, q_vec], 1),
-                                                  self.config.hidden_size,
+                                                  p.hidden_size,
                                                   activation=tf.nn.relu)
 
             output = prev_memory

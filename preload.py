@@ -106,13 +106,19 @@ def get_babi_raw(id, test_id):
     return babi_train_raw, babi_test_raw
 
 
-def load_glove(dim):
+def load_glove():
     word2vec = {}
     print("==> loading glove")
-    with open(("%s/glove.6B.%id.txt") % (p.glove_path, dim)) as f:
-        for line in f:
-            l = line.split()
-            word2vec[l[0]] = map(float, l[1:])
+    if not p.glove_file:
+        with open(("%s/glove.6B.%id.txt") % (p.glove_path, p.embed_size)) as f:
+            for line in f:
+                l = line.split()
+                word2vec[l[0]] = map(float, l[1:])
+    else:
+        with open(("%s/%s") % (p.glove_path, p.glove_file)) as f:
+            for line in f:
+                l = line.split()
+                word2vec[l[0]] = map(float, l[1:])
 
     print("==> glove is loaded")
 
@@ -285,8 +291,7 @@ def load_babi(config, split_sentences=False):
         config.task_id, config.babi_test_id)
 
     if config.word2vec_init:
-        assert config.embed_size == 100
-        word2vec = load_glove(config.embed_size)
+        word2vec = load_glove(p.embed_size)
     else:
         word2vec = {}
 
@@ -296,24 +301,23 @@ def load_babi(config, split_sentences=False):
                  word2vec=word2vec,
                  vocab=vocab,
                  ivocab=ivocab,
-                 word_vector_size=config.embed_size,
+                 word_vector_size=p.embed_size,
                  to_return="index")
 
     if config.train_mode:
         print('==> get train inputs')
         data = process_input(babi_train_raw, config.floatX, word2vec,
-                             vocab, ivocab, config.embed_size, split_sentences, config.answer_prediction)
+                             vocab, ivocab, p.embed_size, split_sentences, config.answer_prediction)
     else:
         print('==> get test inputs')
         data = process_input(babi_test_raw, config.floatX, word2vec,
-                             vocab, ivocab, config.embed_size, split_sentences, config.answer_prediction)
+                             vocab, ivocab, p.embed_size, split_sentences, config.answer_prediction)
 
     if config.word2vec_init:
-        assert config.embed_size == 100
-        word_embedding = create_embedding(word2vec, ivocab, config.embed_size)
+        word_embedding = create_embedding(word2vec, ivocab, p.embed_size)
     else:
         word_embedding = np.random.uniform(-config.embedding_init,
-                                           config.embedding_init, (len(ivocab), config.embed_size))
+                                           config.embedding_init, (len(ivocab), p.embed_size))
 
     inputs, questions, answers, input_masks, rel_labels = data
 

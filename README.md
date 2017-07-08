@@ -42,6 +42,17 @@ Run the included shell script to fetch the data
 
 	bash fetch_babi_data.sh
 
+Process filename in data folder
+
+    python process_file.py
+
+Create file properties.py
+
+glove_path="/home/alex/Documents/nlp/code/data" # path_to_glove
+train_folder="en" # glove file
+embed_size = 100 # dimension of word_embedidng
+hidden_size = 100 # output size of rnn
+
 Use 'dmn_train.py' to train the DMN+ model contained in 'model.py'
 
 	python train.py --task_id 2
