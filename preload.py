@@ -291,7 +291,7 @@ def load_babi(config, split_sentences=False):
         config.task_id, config.babi_test_id)
 
     if config.word2vec_init:
-        word2vec = load_glove(p.embed_size)
+        word2vec = load_glove()
     else:
         word2vec = {}
 
