@@ -282,7 +282,7 @@ def load_babi(config, split_sentences=False):
     ivocab = {}
 
     babi_train_raw, babi_test_raw = get_babi_raw(
-        config.babi_id, config.babi_test_id)
+        config.task_id, config.babi_test_id)
 
     if config.word2vec_init:
         assert config.embed_size == 100

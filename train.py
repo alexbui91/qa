@@ -8,7 +8,7 @@ import time
 import argparse
 import os
 
-from model import Model
+from model import Model, Config
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-b", "--task_id",
@@ -24,6 +24,7 @@ parser.add_argument("-n", "--num_runs", type=int,
 
 args = parser.parse_args()
 
+config = Config()
 
 if args.task_id is not None:
     config.task_id = args.task_id
