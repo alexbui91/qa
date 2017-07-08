@@ -407,10 +407,15 @@ class Model(object):
                     self.dropout_placeholder: dp}
             if config.answer_prediction == "softmax":
                 feed[self.answer_label_placeholder] = a[index]
+                answers = a[step *
+                        config.batch_size:(step + 1) * config.batch_size]
             else:
                 feed[self.answer_placeholder] = a[index]
                 feed[self.answer_label_placeholder] = alb[index]
                 feed[self.answer_len_placeholder] = al[index]
+                answers = alb[step *
+                        config.batch_size:(step + 1) * config.batch_size]
+            
             loss, pred, summary, _ = session.run(
                 [self.calculate_loss, self.pred, self.merged, train_op], feed_dict=feed)
 
@@ -418,10 +423,10 @@ class Model(object):
                 train_writer.add_summary(
                     summary, num_epoch * total_steps + step)
 
-            answers = a[step *
-                        config.batch_size:(step + 1) * config.batch_size]
-            accuracy += np.sum(pred == answers) / float(len(answers))
-
+            if config.answer_prediction == "softmax":
+                accuracy += np.sum(pred == answers) / float(len(answers))
+            else:
+                accuracy += np.sum(pred == answers) / float(len(answers))
             total_loss.append(loss)
             if verbose and step % verbose == 0:
                 sys.stdout.write('\r{} / {} : loss = {}'.format(
