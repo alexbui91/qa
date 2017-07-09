@@ -328,8 +328,8 @@ class Model(object):
         if self.config.answer_prediction == "rnn":
             answer_flat = tf.reshape(self.answer_label_placeholder, shape=[-1])
             output = tf.reshape(output, shape=[self.config.batch_size * self.max_answer_len, self.vocab_size])
-            print("answer_flat", answer_flat)
-            print("output", output)
+            # print("answer_flat", answer_flat)
+            # print("output", output)
             """
                 answer_flat Tensor("DMN/Reshape_2:0", shape=(200,), dtype=int64)
                 output Tensor("DMN/Reshape_3:0", shape=(300, 24), dtype=float32)
@@ -425,7 +425,8 @@ class Model(object):
             if config.answer_prediction == "softmax":
                 accuracy += np.sum(pred == answers) / float(len(answers))
             else:
-                accuracy += np.sum(pred == answers) / float(len(answers))
+                ans_length = len(np.hstack(answers))
+                accuracy += np.sum(pred == answers) / float(ans_length)
             total_loss.append(loss)
             if verbose and step % verbose == 0:
                 sys.stdout.write('\r{} / {} : loss = {}'.format(

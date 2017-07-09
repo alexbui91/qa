@@ -24,13 +24,13 @@ This code has been modified with GRU cells in answer module
 ## Set up environment
 Install Tensorflow with python 2.7.x (https://www.tensorflow.org/install/)
 
-sudo apt-get install python-pip python-dev python-virtualenv
+	sudo apt-get install python-pip python-dev python-virtualenv
 
-virtualenv --system-site-packages tensorflow
+	virtualenv --system-site-packages tensorflow
 
-source ~/tensorflow/bin/activate
+	source ~/tensorflow/bin/activate
 
-pip install --upgrade tensorflow
+	pip install --upgrade tensorflow
 
 # optional if you would like to run on gpu
 pip install --upgrade tensorflow-gpu 
@@ -47,11 +47,19 @@ Process filename in data folder
     python process_file.py
 
 Create file properties.py
-
-glove_path="/home/alex/Documents/nlp/code/data" # path_to_glove
-train_folder="en" # glove file
-embed_size = 100 # dimension of word_embedidng
-hidden_size = 100 # output size of rnn
+ 
+ 	# path_to_glove
+	glove_path="/home/alex/Documents/nlp/code/data"
+	# glove file
+	glove_file=""
+	train_folder="en"
+	# dimension of word_embedidng
+	embed_size = 100
+	# output size of rnn
+	hidden_size = 100
+	# either softmax or rnn
+	answer_prediction="rnn"
+	use_glove=True
 
 Use 'dmn_train.py' to train the DMN+ model contained in 'model.py'
 
