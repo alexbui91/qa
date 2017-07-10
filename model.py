@@ -283,7 +283,7 @@ class Model(object):
             #output tensor shape: batch_size x length_of_answer x vocab_size_dimension
             output = tf.layers.dense(dr_output,
                                     self.vocab_size,
-                                    activation=None,
+                                    activation=None,FV
                                     name="output_prediction_rnn")
         else:
             # currently use just 1 single output answer
@@ -337,7 +337,7 @@ class Model(object):
 
         # pass memory module output through linear answer module
         with tf.variable_scope("answer", initializer=tf.contrib.layers.xavier_initializer()):
-            output = self.add_answer_module(output, q_ve, embeddings)
+            output = self.add_answer_module(output, q_vec, embeddings)
 
         return output
 
