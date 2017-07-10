@@ -13,6 +13,8 @@ class SMGRUCell(RNNCell):
 
   def __init__(self,
                num_units,
+               question,
+               memory,
                activation=None,
                reuse=None,
                kernel_initializer=None,
@@ -22,6 +24,8 @@ class SMGRUCell(RNNCell):
     self._activation = activation or math_ops.tanh
     self._kernel_initializer = kernel_initializer
     self._bias_initializer = bias_initializer
+    self.question = question
+    self.memory = memory
 
   @property
   def state_size(self):
@@ -34,6 +38,11 @@ class SMGRUCell(RNNCell):
   def call(self, inputs, state):
     """Gated recurrent unit (GRU) with nunits cells."""
     with vs.variable_scope("gates"):  # Reset gate and update gate.
+      # calculate xt = [q, yt-1, xt]
+      if self.question is not None:
+        inputs = tf.concat([inputs, self.question], axis=1)
+      if self.memory is not None:
+        inputs = tf.concat([inputs, self.memory], axis=1)
       # We start with bias of 1.0 to not reset and not update.
       bias_ones = self._bias_initializer
       if self._bias_initializer is None:

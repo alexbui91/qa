@@ -243,7 +243,7 @@ class Model(object):
         if self.config.answer_prediction == "rnn":
             # get prediction at timestep
             y0 = tf.nn.softmax(rnn_output)
-            gru_cell = SMGRUCell(p.hidden_size)
+            gru_cell = SMGRUCell(p.hidden_size, q_vec, rnn_output)
             pred_outputs, _ = tf.nn.dynamic_rnn(gru_cell,
                                         answer_embedding,
                                         dtype=np.float32,
