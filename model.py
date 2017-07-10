@@ -88,14 +88,37 @@ def _position_encoding(sentence_size, embedding_size):
 
 class Model(object):
 
+    def __init__(self, config, glove):
+        self.config = config
+        self.glove = glove
+        self.variables_to_save = {}
+        #load data from babi dataset
+        self.load_data(debug=False)
+        #init memory
+        self.add_placeholders()
+        #init model
+        self.output = self.inference()
+        #init prediction step
+        self.pred = self.get_predictions(self.output)
+        #init cost function
+        self.calculate_loss = self.add_loss_op(self.output)
+        #init gradient
+        self.train_step = self.add_training_op(self.calculate_loss)
+        self.merged = tf.summary.merge_all()
+
+    def set_config():
+        self.config = config
+
     def load_data(self, debug=False):
         """Loads train/valid/test data and sentence encoding"""
         if self.config.train_mode:
-            self.train, self.valid, self.word_embedding, self.max_q_len, self.max_input_len, self.max_sen_len, self.max_answer_len, self.num_supporting_facts, self.vocab_size = preload.load_babi(
-                self.config, split_sentences=True)
+            self.train, self.valid, self.word_embedding, self.max_q_len, \
+            self.max_input_len, self.max_sen_len, self.max_answer_len, \
+            self.num_supporting_facts, self.vocab_size = preload.load_babi(self.config, self.glove, split_sentences=True)
         else:
-            self.test, self.word_embedding, self.max_q_len, self.max_input_len, self.max_sen_len, self.max_answer_len, self.num_supporting_facts, self.vocab_size = preload.load_babi(
-                self.config, split_sentences=True)
+            self.test, self.word_embedding, self.max_q_len, self.max_input_len, \
+            self.max_sen_len, self.max_answer_len, self.num_supporting_facts, \
+            self.vocab_size = preload.load_babi(self.config, self.glove, split_sentences=True)
         # plus one in max_answer_len for an addition eos character to comparison in cross_entropy
         # minus when perform rnn
         # self.max_answer_len = self.max_answer_len + 1
@@ -191,9 +214,10 @@ class Model(object):
         """
         with tf.variable_scope("attention", reuse=False):
 
-            features = [fact_vec * q_vec,
-                        fact_vec * prev_memory,
-                        tf.abs(fact_vec - q_vec),
+            features = [fact_vec, prev_memory, q_vec, \
+                        fact_vec * q_vec, \
+                        fact_vec * prev_memory, \
+                        tf.abs(fact_vec - q_vec), \
                         tf.abs(fact_vec - prev_memory)]
             # feature_vec with size b x 4d
             feature_vec = tf.concat(features, 1)
@@ -239,9 +263,10 @@ class Model(object):
         # episode is latest memory
         return episode
 
-    def add_answer_module(self, rnn_output, q_vec, answer_embedding):
+    def add_answer_module(self, rnn_output, q_vec, embeddings):
         if self.config.answer_prediction == "rnn":
             # get prediction at timestep
+            answer_embedding = self.get_answer_representation(embeddings)
             y0 = tf.nn.softmax(rnn_output)
             gru_cell = SMGRUCell(p.hidden_size, q_vec, rnn_output)
             pred_outputs, _ = tf.nn.dynamic_rnn(gru_cell,
@@ -312,8 +337,7 @@ class Model(object):
 
         # pass memory module output through linear answer module
         with tf.variable_scope("answer", initializer=tf.contrib.layers.xavier_initializer()):
-            answer_embedding = self.get_answer_representation(embeddings)
-            output = self.add_answer_module(output, q_vec, answer_embedding)
+            output = self.add_answer_module(output, q_ve, embeddings)
 
         return output
 
@@ -341,8 +365,8 @@ class Model(object):
             """ answer Tensor("DMN/Placeholder_6:0", shape=(100,), dtype=int64)
                 output Tensor("DMN/answer/output_prediction_softmax/BiasAdd:0", shape=(?, 32), dtype=float32)
             """
-            print("answer", self.answer_label_placeholder)
-            print("output", output)
+            # print("answer", self.answer_label_placeholder)
+            # print("output", output)
             loss = self.config.beta * tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(
                 logits=output, labels=self.answer_label_placeholder)) + gate_loss
 
@@ -440,20 +464,3 @@ class Model(object):
         if total_steps:
             avg_acc = accuracy / float(total_steps)
         return np.mean(total_loss), avg_acc
-
-    def __init__(self, config):
-        self.config = config
-        self.variables_to_save = {}
-        #load data from babi dataset
-        self.load_data(debug=False)
-        #init memory
-        self.add_placeholders()
-        #init model
-        self.output = self.inference()
-        #init prediction step
-        self.pred = self.get_predictions(self.output)
-        #init cost function
-        self.calculate_loss = self.add_loss_op(self.output)
-        #init gradient
-        self.train_step = self.add_training_op(self.calculate_loss)
-        self.merged = tf.summary.merge_all()

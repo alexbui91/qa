@@ -12,6 +12,9 @@ input_mask_mode = "sentence"
 
 # adapted from https://github.com/YerevaNN/Dynamic-memory-networks-in-Theano/
 
+#make sure this will not be reloaded
+word2vec = None
+
 
 def init_babi(fname):
 
@@ -104,25 +107,6 @@ def get_babi_raw(id, test_id):
     babi_test_raw = init_babi(os.path.join(os.path.dirname(os.path.realpath(
         __file__)), 'data/%s/%s_test.txt' % (p.train_folder, babi_test_name)))
     return babi_train_raw, babi_test_raw
-
-
-def load_glove():
-    word2vec = {}
-    print("==> loading glove")
-    if not p.glove_file:
-        with open(("%s/glove.6B.%id.txt") % (p.glove_path, p.embed_size)) as f:
-            for line in f:
-                l = line.split()
-                word2vec[l[0]] = map(float, l[1:])
-    else:
-        with open(("%s/%s") % (p.glove_path, p.glove_file)) as f:
-            for line in f:
-                l = line.split()
-                word2vec[l[0]] = map(float, l[1:])
-
-    print("==> glove is loaded")
-
-    return word2vec
 
 
 def create_vector(word, word2vec, word_vector_size, silent=True):
@@ -283,18 +267,12 @@ def create_embedding(word2vec, ivocab, embed_size):
     return embedding
 
 
-def load_babi(config, split_sentences=False):
+def load_babi(config, word2vec, split_sentences=False):
     vocab = {}
     ivocab = {}
 
     babi_train_raw, babi_test_raw = get_babi_raw(
         config.task_id, config.babi_test_id)
-
-    if config.word2vec_init:
-        word2vec = load_glove()
-    else:
-        word2vec = {}
-
     # set word at index zero to be end of sentence token so padding with zeros
     # is consistent
     process_word(word="<eos>",
