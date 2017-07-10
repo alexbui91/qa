@@ -144,39 +144,21 @@ def process_input(data_raw, floatX, word2vec, vocab, ivocab, embed_size, split_s
     relevant_labels = []
     for x in data_raw:
         #inp_vector is list of indexes of word_vector in vocabs
-        if split_sentences:
-            inp = x["C"].lower().split(' . ')
-            inp = [w for w in inp if len(w) > 0]
-            inp = [i.split() for i in inp]
+        inp = x["C"].lower().split(' . ')
+        inp = [w for w in inp if len(w) > 0]
+        inp = [i.split() for i in inp]
 
-            inp_vector = [[process_word(word=w,
-                                        word2vec=word2vec,
-                                        vocab=vocab,
-                                        ivocab=ivocab,
-                                        word_vector_size=embed_size,
-                                        to_return="index") for w in s] for s in inp]
-            inputs.append(inp_vector)
-        else:
-            inp = x["C"].lower().split(' ')
-            inp = [w for w in inp if len(w) > 0]
-
-            inp_vector = [process_word(word=w,
-                                       word2vec=word2vec,
-                                       vocab=vocab,
-                                       ivocab=ivocab,
-                                       word_vector_size=embed_size,
-                                       to_return="index") for w in inp]
-            inputs.append(np.vstack(inp_vector).astype(floatX))
+        inp_vector = list()
+        for s in inp:
+            inp_vector.append(process_sentence(s, word2vec, vocab, ivocab, embed_size))
+                
+        inputs.append(inp_vector)
         
         q = x["Q"].lower().split(' ')
         q = [w for w in q if len(w) > 0]
 
-        q_vector = [process_word(word=w,
-                                 word2vec=word2vec,
-                                 vocab=vocab,
-                                 ivocab=ivocab,
-                                 word_vector_size=embed_size,
-                                 to_return="index") for w in q]
+        q_vector = process_sentence(q, word2vec, vocab, ivocab, embed_size)
+
         #use vstack => generate a vector l x 1 => mapping to embedding => l x d
         #create a vector of question by vstack => map to embedding tensorflow
         questions.append(np.vstack(q_vector).astype(floatX))
@@ -209,6 +191,29 @@ def process_input(data_raw, floatX, word2vec, vocab, ivocab, embed_size, split_s
 
         relevant_labels.append(x["S"])
     return inputs, questions, answers, input_masks, relevant_labels
+
+
+def process_sentence(sent, word2vec, vocab, ivocab, embed_size):
+    s_v = list()
+    for w in sent:
+        s_v.append(process_word(word=w,
+                                word2vec=word2vec,
+                                vocab=vocab,
+                                ivocab=ivocab,
+                                word_vector_size=embed_size,
+                                to_return="index"))
+        process_characters(w, word2vec, vocab, ivocab, embed_size)
+    return s_v
+
+
+def process_characters(word, word2vec, vocab, ivocab, embed_size):
+    for c in word:
+        process_word(word=c,
+                word2vec=word2vec,
+                vocab=vocab,
+                ivocab=ivocab,
+                word_vector_size=embed_size,
+                to_return="index")
 
 
 def get_lens(inputs, split_sentences=False):
@@ -270,7 +275,7 @@ def create_embedding(word2vec, ivocab, embed_size):
 def load_babi(config, word2vec, split_sentences=False):
     vocab = {}
     ivocab = {}
-    print("load_babi", config.task_id)
+
     babi_train_raw, babi_test_raw = get_babi_raw(
         config.task_id, config.babi_test_id)
     # set word at index zero to be end of sentence token so padding with zeros
