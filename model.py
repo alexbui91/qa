@@ -98,7 +98,7 @@ class Model(object):
                 self.config, split_sentences=True)
         # plus one in max_answer_len for an addition eos character to comparison in cross_entropy
         # minus when perform rnn
-        self.max_answer_len = self.max_answer_len + 1
+        # self.max_answer_len = self.max_answer_len + 1
         self.encoding = _position_encoding(
             self.max_sen_len, p.embed_size)
 
@@ -113,7 +113,7 @@ class Model(object):
             self.config.batch_size, self.max_input_len, self.max_sen_len))  
         # remove 1 to get real answer length in RNN. Will plus one in first y0
         # this for rnn prediction
-        self.answer_placeholder = tf.placeholder(tf.int64, shape=(self.config.batch_size, self.max_answer_len - 1))
+        self.answer_placeholder = tf.placeholder(tf.int64, shape=(self.config.batch_size, self.max_answer_len))
         
         # placeholder for length of rnn 
         self.question_len_placeholder = tf.placeholder(
@@ -252,6 +252,7 @@ class Model(object):
             # outputs will be a array of words predict with batch_size x dimension 
             # need to dense each vector answer to vocab size 
             y0 = tf.expand_dims(y0, 1)
+            pred_outputs = tf.slice(pred_outputs, [0, 0, 0], [self.config.batch_size, self.max_answer_len - 1, p.hidden_size])
             pred_outputs = tf.concat([y0, pred_outputs], 1)
             dr_output = tf.nn.dropout(pred_outputs, self.dropout_placeholder)
             #output tensor shape: batch_size x length_of_answer x vocab_size_dimension

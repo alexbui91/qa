@@ -336,9 +336,10 @@ def load_babi(config, split_sentences=False):
         
         max_answer_len = min(config.max_answer_len, max_answer_len)
         #plus one for end token
-        ans_label = pad_inputs(answers, a_lens, max_answer_len + 1)
+        # ans_label = pad_inputs(answers, a_lens, max_answer_len + 1)
         # make sure every answer seq has same length
         answers = pad_inputs(answers, a_lens, max_answer_len)
+        ans_label = np.copy(answers)
         
     else: 
         # change from list to matrix style
