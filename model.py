@@ -283,7 +283,7 @@ class Model(object):
             #output tensor shape: batch_size x length_of_answer x vocab_size_dimension
             output = tf.layers.dense(dr_output,
                                     self.vocab_size,
-                                    activation=None,FV
+                                    activation=None,
                                     name="output_prediction_rnn")
         else:
             # currently use just 1 single output answer
