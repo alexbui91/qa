@@ -270,7 +270,7 @@ def create_embedding(word2vec, ivocab, embed_size):
 def load_babi(config, word2vec, split_sentences=False):
     vocab = {}
     ivocab = {}
-
+    print("load_babi", config.task_id)
     babi_train_raw, babi_test_raw = get_babi_raw(
         config.task_id, config.babi_test_id)
     # set word at index zero to be end of sentence token so padding with zeros

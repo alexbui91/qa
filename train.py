@@ -145,7 +145,6 @@ if config.word2vec_init:
         word2vec = load_glove()
 else:
     word2vec = {}
-model = Model(config, word2vec)
 
 
 # init parameters in terminal
@@ -169,14 +168,15 @@ if __name__ == "__main__":
     num_runs = args.num_runs if args.num_runs is not None else '1'
     if args.task_id is not None:
         if ',' not in args.task_id:
-            model.config.task_id = args.task_id
+            config.task_id = args.task_id
+            model = Model(config, word2vec)
             main(int(num_runs[0]), args.restore)
         else:
             tn = get_task_num(args.task_id, args.num_runs)
             for task, num in tn:
-                model.config.task_id = task
+                config.task_id = task
                 main(num, restore)
-            
+        
     
 
 

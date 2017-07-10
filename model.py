@@ -266,25 +266,44 @@ class Model(object):
     def add_answer_module(self, rnn_output, q_vec, embeddings):
         if self.config.answer_prediction == "rnn":
             # get prediction at timestep
-            answer_embedding = self.get_answer_representation(embeddings)
-            y0 = tf.nn.softmax(rnn_output)
-            gru_cell = SMGRUCell(p.hidden_size, q_vec, rnn_output)
-            pred_outputs, _ = tf.nn.dynamic_rnn(gru_cell,
-                                        answer_embedding,
-                                        dtype=np.float32,
-                                        initial_state=rnn_output,
-                                        sequence_length=self.answer_len_placeholder)
-            # outputs will be a array of words predict with batch_size x dimension 
-            # need to dense each vector answer to vocab size 
+            rnn_output = tf.nn.dropout(rnn_output, self.dropout_placeholder, name="output_dropout")
+            y0 = tf.layers.dense(rnn_output,
+                                self.vocab_size,
+                                activation=None,
+                                name="output_prediction_softmax")
             y0 = tf.expand_dims(y0, 1)
-            pred_outputs = tf.slice(pred_outputs, [0, 0, 0], [self.config.batch_size, self.max_answer_len - 1, p.hidden_size])
-            pred_outputs = tf.concat([y0, pred_outputs], 1)
-            dr_output = tf.nn.dropout(pred_outputs, self.dropout_placeholder)
-            #output tensor shape: batch_size x length_of_answer x vocab_size_dimension
-            output = tf.layers.dense(dr_output,
+            if self.max_answer_len > 1:
+                answer_embedding = self.get_answer_representation(embeddings)
+                gru_cell = SMGRUCell(p.hidden_size, q_vec, rnn_output)
+                outputs, _ = tf.nn.dynamic_rnn(gru_cell,
+                                            answer_embedding,
+                                            dtype=np.float32,
+                                            initial_state=rnn_output,
+                                            sequence_length=self.answer_len_placeholder)
+                # outputs will be a array of words predict with batch_size x dimension 
+                # need to dense each vector answer to vocab size 
+                outputs = tf.unstack(outputs, axis=1)
+                pred_outputs = list()
+                pred_outputs.append(y0)
+                for o in outputs[:-1]:
+                    o_x = tf.expand_dims(o, 1)
+                    dr_output = tf.nn.dropout(o_x, self.dropout_placeholder, name="output_dropout")
+                    o_d = tf.layers.dense(dr_output,
                                     self.vocab_size,
                                     activation=None,
-                                    name="output_prediction_rnn")
+                                    name="output_prediction_softmax", 
+                                    reuse=True)
+                    pred_outputs.append(o_d)
+                
+                output = tf.concat(pred_outputs, 1)
+            else: 
+                output = y0
+            # dr_output = tf.nn.dropout(pred_outputs, self.dropout_placeholder)
+            # #output tensor shape: batch_size x length_of_answer x vocab_size_dimension
+            # output = tf.layers.dense(dr_output,
+            #                         self.vocab_size,
+            #                         activation=None,
+            #                         name="output_prediction_rnn")
         else:
             # currently use just 1 single output answer
             rnn_output = tf.nn.dropout(rnn_output, self.dropout_placeholder)

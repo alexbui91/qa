@@ -58,5 +58,4 @@ class SMGRUCell(RNNCell):
                   self._bias_initializer, self._kernel_initializer))
     new_h = u * state + (1 - u) * c
     #calculate yt = softmax
-    output = tf.nn.softmax(new_h)
-    return output, new_h
+    return new_h, new_h
