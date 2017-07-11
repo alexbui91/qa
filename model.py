@@ -96,14 +96,15 @@ class Model(object):
         self.load_data(debug=False)
         #init memory
         self.add_placeholders()
-        #init model
-        self.output = self.inference()
-        #init prediction step
-        self.pred = self.get_predictions(self.output)
-        #init cost function
-        self.calculate_loss = self.add_loss_op(self.output)
-        #init gradient
-        self.train_step = self.add_training_op(self.calculate_loss)
+        with tf.device('/%s' % p.device):
+            #init model
+            self.output = self.inference()
+            #init prediction step
+            self.pred = self.get_predictions(self.output)
+            #init cost function
+            self.calculate_loss = self.add_loss_op(self.output)
+            #init gradient
+            self.train_step = self.add_training_op(self.calculate_loss)
         self.merged = tf.summary.merge_all()
 
     def set_config():
@@ -319,7 +320,7 @@ class Model(object):
         # set up embedding
         embeddings = tf.Variable(
             self.word_embedding.astype(np.float32), name="Embedding")
-
+            
         # input fusion module
         with tf.variable_scope("question", initializer=tf.contrib.layers.xavier_initializer()):
             print('==> get question representation')
