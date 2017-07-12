@@ -13,6 +13,7 @@ from model import Model, Config
 
 
 def main(model, num_runs, restore):
+    # tf.reset_default_graph()
     print('Start training DMN on babi task', config.task_id)
     
     # model.init_data_node()
@@ -20,9 +21,8 @@ def main(model, num_runs, restore):
 
     # create model
     tconfig = tf.ConfigProto(allow_soft_placement=True)
-
+    print(num_runs)
     for run in range(num_runs):
-
         print('Starting run', run)
 
         with tf.device('/%s' % p.device):

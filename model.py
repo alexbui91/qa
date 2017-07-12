@@ -450,7 +450,6 @@ class Model(object):
                     self.input_placeholder: ip[index],
                     self.question_len_placeholder: ql[index],
                     self.input_len_placeholder: il[index],
-                    self.rel_label_placeholder: r[index],
                     self.dropout_placeholder: dp}
             if config.answer_prediction == "softmax":
                 feed[self.answer_label_placeholder] = a[index]
@@ -462,6 +461,9 @@ class Model(object):
                 feed[self.answer_len_placeholder] = al[index]
                 answers = alb[step *
                         config.batch_size:(step + 1) * config.batch_size]
+            if config.strong_supervision:
+                feed[self.rel_label_placeholder] = r[index]
+
             loss, pred, summary, _ = session.run(
                 [self.calculate_loss, self.pred, self.merged, train_op], feed_dict=feed)
 

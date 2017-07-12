@@ -347,15 +347,13 @@ def load_babi(config, word2vec, split_sentences=False):
                  to_return="index")
 
     babi_raw, babi_dev_raw = get_babi_raw(config.task_id, config.babi_test_id, config.train_mode)
+    data = process_input(babi_raw, config.floatX, word2vec,
+                        vocab, ivocab, p.embed_size, split_sentences, config.answer_prediction)
     dev = None
     if babi_dev_raw is not None:
-        data = process_input(babi_raw, config.floatX, word2vec,
-                            vocab, ivocab, p.embed_size, split_sentences, config.answer_prediction)
         dev = process_input(babi_dev_raw, config.floatX, word2vec,
                             vocab, ivocab, p.embed_size, split_sentences, config.answer_prediction)
-    else:
-        data = process_input(babi_raw, config.floatX, word2vec,
-                            vocab, ivocab, p.embed_size, split_sentences, config.answer_prediction)
+   
     if config.word2vec_init:
         word_embedding = create_embedding(word2vec, ivocab, p.embed_size)
     else:
@@ -374,7 +372,6 @@ def load_babi(config, word2vec, split_sentences=False):
     lens = (input_lens, sen_lens, q_lens, a_lens)
     inputs, input_masks, questions, answers, ans_label, rel_labels = process_data(config, data, lens, maxs)
     max_mask_len = max_sen_len
-    
     if config.train_mode:
         #separate part of train data to valid
         if a_lens is not None:
