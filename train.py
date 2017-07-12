@@ -69,15 +69,16 @@ def main(model, num_runs, restore):
                     if best_val_loss < best_overall_val_loss:
                         print('Saving weights')
                         best_overall_val_loss = best_val_loss
-                        best_val_accuracy = valid_accuracy
                         saver.save(session, 'weights/task' +
                                 str(model.config.task_id) + '.weights')
-
                 # anneal
                 if train_loss > prev_epoch_loss * model.config.anneal_threshold:
                     model.config.lr /= model.config.anneal_by
                     print('annealed lr to %f' % model.config.lr)
-
+                
+                if best_val_accuracy < valid_accuracy:
+                    best_val_accuracy = valid_accuracy
+                    
                 prev_epoch_loss = train_loss
 
                 if epoch - best_val_epoch > config.early_stopping:

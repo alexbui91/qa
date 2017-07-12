@@ -361,14 +361,13 @@ def load_babi(config, word2vec, split_sentences=False):
                                            config.embedding_init, (len(ivocab), p.embed_size))
     # get length of train
     input_lens, max_input_len, sen_lens, max_sen_len, q_lens, max_q_len, a_lens, max_answer_len = get_max_len(config, data, (0, 0, 0, 0))
+    maxs = (max_input_len, max_sen_len, max_q_len, max_answer_len)
     # get length of dev
     if babi_dev_raw is not None:
-        maxs = (max_input_len, max_sen_len, max_q_len, max_answer_len)
         input_lens_d, max_input_len, sen_lens_d, max_sen_len, q_lens_d, max_q_len, a_lens_d, max_answer_len = get_max_len(config, dev, maxs)
+        maxs = (max_input_len, max_sen_len, max_q_len, max_answer_len)
         lens_d = (input_lens_d, sen_lens_d, q_lens_d, a_lens_d)
         inputs_d, input_masks_d, questions_d, answers_d, ans_label_d, rel_labels_d = process_data(config, dev, lens_d, maxs)
-
-    maxs = (max_input_len, max_sen_len, max_q_len, max_answer_len)
     lens = (input_lens, sen_lens, q_lens, a_lens)
     inputs, input_masks, questions, answers, ans_label, rel_labels = process_data(config, data, lens, maxs)
     max_mask_len = max_sen_len
