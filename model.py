@@ -92,18 +92,19 @@ class Model(object):
         self.config = config
         self.glove = glove
         self.variables_to_save = {}
-        #load data from babi dataset
+        # load data from babi dataset
         self.load_data(debug=False)
-        #init memory
+        # init memory
         self.add_placeholders()
+        # init computational node
         with tf.device('/%s' % p.device):
-            #init model
+            # init model
             self.output = self.inference()
-            #init prediction step
+            # init prediction step
             self.pred = self.get_predictions(self.output)
-            #init cost function
+            # init cost function
             self.calculate_loss = self.add_loss_op(self.output)
-            #init gradient
+            # init gradient
             self.train_step = self.add_training_op(self.calculate_loss)
         self.merged = tf.summary.merge_all()
 
