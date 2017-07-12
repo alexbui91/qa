@@ -94,10 +94,11 @@ class Model(object):
         self.variables_to_save = {}
         # load data from babi dataset
         self.load_data(debug=False)
-        # init memory
-        self.add_placeholders()
-        # init computational node
+
         with tf.device('/%s' % p.device):
+            # init memory
+            self.add_placeholders()
+            # init computational node
             # init model
             self.output = self.inference()
             # init prediction step
