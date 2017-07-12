@@ -25,9 +25,10 @@ def main(model, num_runs, restore):
 
         print('Starting run', run)
 
-        print('==> initializing variables')
-        init = tf.global_variables_initializer()
-        saver = tf.train.Saver()
+        with tf.device('/%s' % p.device):
+            print('==> initializing variables')
+            init = tf.global_variables_initializer()
+            saver = tf.train.Saver()
 
         with tf.Session(config=tconfig) as session:
 
