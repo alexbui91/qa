@@ -27,8 +27,8 @@ def main(model):
         print('==> restoring weights')
         saver.restore(session, 'weights/task%s.weights' % model.config.task_id)
         print('==> running model')
-        test_loss, test_accuracy = model.run_epoch(session, model.test)
-        print('Test accuracy:{}'.format(test_accuracy))
+        test_loss, test_accuracy = model.run_epoch(session, model.test, verbose=0)
+        print("Test accuracy: %0.2f" % test_accuracy)
 
 
 def init_config(task_id):
@@ -38,6 +38,7 @@ def init_config(task_id):
             word2vec = utils.load_glove()
     else:
         word2vec = {}
+    config.batch_size = 10
     config.strong_supervision = False
     config.train_mode = False
     config.task_id = task_id
