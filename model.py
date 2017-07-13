@@ -20,6 +20,8 @@ import properties as p
 class Config(object):
     """Holds model hyperparams and data information."""
 
+    reset = False
+
     batch_size = 100
 
     max_epochs = 256
@@ -91,6 +93,9 @@ class Model(object):
     def __init__(self, config, glove):
         self.config = config
         self.glove = glove
+        self.init_global()
+
+    def init_global(self):
         self.variables_to_save = {}
         # load data from babi dataset
         self.load_data(debug=False)
@@ -109,19 +114,16 @@ class Model(object):
             self.train_step = self.add_training_op(self.calculate_loss)
         self.merged = tf.summary.merge_all()
 
-    def set_config():
-        self.config = config
-
     def load_data(self, debug=False):
         """Loads train/valid/test data and sentence encoding"""
         if self.config.train_mode:
             self.train, self.valid, self.word_embedding, self.max_q_len, \
             self.max_input_len, self.max_sen_len, self.max_answer_len, \
-            self.num_supporting_facts, self.vocab_size = preload.load_babi(self.config, self.glove, split_sentences=True)
+            self.num_supporting_facts, self.vocab_size = preload.load_babi(self.config, self.glove, split_sentences=True, train_mode=self.config.train_mode)
         else:
             self.test, self.word_embedding, self.max_q_len, self.max_input_len, \
             self.max_sen_len, self.max_answer_len, self.num_supporting_facts, \
-            self.vocab_size = preload.load_babi(self.config, self.glove, split_sentences=True)
+            self.vocab_size = preload.load_babi(self.config, self.glove, split_sentences=True, train_mode=self.config.train_mode)
         # plus one in max_answer_len for an addition eos character to comparison in cross_entropy
         # minus when perform rnn
         # self.max_answer_len = self.max_answer_len + 1
@@ -481,7 +483,6 @@ class Model(object):
                 sys.stdout.write('\r{} / {} : loss = {}'.format(
                     step, total_steps, np.mean(total_loss)))
                 sys.stdout.flush()
-
         if verbose:
             sys.stdout.write('\r')
         avg_acc = 0.

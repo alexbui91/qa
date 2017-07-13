@@ -188,16 +188,15 @@ def process_input(data_raw, floatX, word2vec, vocab, ivocab, embed_size, split_s
                                 word_vector_size=embed_size,
                                 to_return="index") for a in x["A"].lower().split(',')]
             answers.append(np.vstack(ans).astype(floatX))
-        # NOTE: here we assume the answer is one word!
-        if not split_sentences:
-            if input_mask_mode == 'word':
-                input_masks.append(
-                    np.array([index for index, w in enumerate(inp)], dtype=np.int32))
-            elif input_mask_mode == 'sentence':
-                input_masks.append(
-                    np.array([index for index, w in enumerate(inp) if w == '.'], dtype=np.int32))
-            else:
-                raise Exception("invalid input_mask_mode")
+        # if not split_sentences:
+        #     if input_mask_mode == 'word':
+        #         input_masks.append(
+        #             np.array([index for index, w in enumerate(inp)], dtype=np.int32))
+        #     elif input_mask_mode == 'sentence':
+        #         input_masks.append(
+        #             np.array([index for index, w in enumerate(inp) if w == '.'], dtype=np.int32))
+        #     else:
+        #         raise Exception("invalid input_mask_mode")
 
         relevant_labels.append(x["S"])
     return inputs, questions, answers, input_masks, relevant_labels
@@ -304,7 +303,7 @@ def get_max_len(config, data, maxs):
     return input_lens, max_input_len, sen_lens, max_sen_len, q_lens, max_q_len, a_lens, max_answer_len
 
 
-def process_data(config, data, lens, maxs):
+def process_data(config, data, lens, maxs, train_mode=True):
     max_input_len, max_sen_len, max_q_len, max_answer_len = maxs
     max_mask_len = max_sen_len
 
@@ -316,6 +315,8 @@ def process_data(config, data, lens, maxs):
     if config.answer_prediction == "rnn":
         answers = pad_inputs(answers, a_lens, max_answer_len)
         ans_label = np.copy(answers)
+        if not train_mode:
+            answers = np.zeros_like(answers, dtype=config.floatX)
     else:
         answers = np.stack(answers)
     
@@ -333,7 +334,7 @@ def process_data(config, data, lens, maxs):
     return inputs, input_masks, questions, answers, ans_label, rel_labels
 
 
-def load_babi(config, word2vec, split_sentences=False):
+def load_babi(config, word2vec, split_sentences=False, train_mode=True):
     vocab = {}
     ivocab = {}
     
@@ -367,9 +368,9 @@ def load_babi(config, word2vec, split_sentences=False):
         input_lens_d, max_input_len, sen_lens_d, max_sen_len, q_lens_d, max_q_len, a_lens_d, max_answer_len = get_max_len(config, dev, maxs)
         maxs = (max_input_len, max_sen_len, max_q_len, max_answer_len)
         lens_d = (input_lens_d, sen_lens_d, q_lens_d, a_lens_d)
-        inputs_d, input_masks_d, questions_d, answers_d, ans_label_d, rel_labels_d = process_data(config, dev, lens_d, maxs)
+        inputs_d, input_masks_d, questions_d, answers_d, ans_label_d, rel_labels_d = process_data(config, dev, lens_d, maxs, train_mode)
     lens = (input_lens, sen_lens, q_lens, a_lens)
-    inputs, input_masks, questions, answers, ans_label, rel_labels = process_data(config, data, lens, maxs)
+    inputs, input_masks, questions, answers, ans_label, rel_labels = process_data(config, data, lens, maxs, train_mode)
     max_mask_len = max_sen_len
     if config.train_mode:
         #separate part of train data to valid
@@ -383,8 +384,7 @@ def load_babi(config, word2vec, split_sentences=False):
                     input_lens[config.num_train:], input_masks[config.num_train:], answers[config.num_train:],  \
                     a_lens[config.num_train:], ans_label[config.num_train:], rel_labels[config.num_train:]
             else:
-                train = questions, inputs, q_lens, input_lens, input_masks,  \
-                        answers, a_lens, ans_label, rel_labels
+                train = questions, inputs, q_lens, input_lens, input_masks, answers, a_lens, ans_label, rel_labels
                 valid = questions_d, inputs_d, q_lens_d, input_lens_d, input_masks_d, answers_d, a_lens_d, ans_label_d, rel_labels_d
         else:
             # for softmax
@@ -400,5 +400,9 @@ def load_babi(config, word2vec, split_sentences=False):
                 valid = questions_d, inputs_d, q_lens_d, input_lens_d, input_masks_d, answers_d, rel_labels_d
         return train, valid, word_embedding, max_q_len, max_input_len, max_mask_len, max_answer_len, rel_labels.shape[1], len(vocab)
     else:
-        test = questions, inputs, q_lens, input_lens, input_masks, answers, rel_labels
+        if a_lens is not None:
+            # for rnn
+            test = questions, inputs, q_lens, input_lens, input_masks, answers, a_lens, ans_label, rel_labels
+        else:
+            test = questions, inputs, q_lens, input_lens, input_masks, answers, rel_labels
         return test, word_embedding, max_q_len, max_input_len, max_mask_len, max_answer_len, rel_labels.shape[1], len(vocab)

@@ -7,56 +7,61 @@ import numpy as np
 import time
 import argparse
 
-parser = argparse.ArgumentParser()
-parser.add_argument("-b", "--babi_task_id",
-                    help="specify babi task 1-20 (default=1)")
-parser.add_argument("-t", "--dmn_type",
-                    help="specify type of dmn (default=original)")
-args = parser.parse_args()
+from model import Model, Config
+import properties as p
+import utils
 
-dmn_type = args.dmn_type if args.dmn_type is not None else "plus"
 
-if dmn_type == "original":
-    from dmn_original import Config
-    config = Config()
-elif dmn_type == "plus":
-    from dmn_plus import Config
-    config = Config()
-else:
-    raise NotImplementedError(
-        dmn_type + ' DMN type is not currently implemented')
+def main(model):
+    global config
+    print('Testing task: %s ' % config.task_id)
+    # create model
+    with tf.device('/%s' % p.device):
+        print('==> initializing variables')
+        init = tf.global_variables_initializer()
+        saver = tf.train.Saver()
+    
+    tconfig = tf.ConfigProto(allow_soft_placement=True)
+    with tf.Session(config=tconfig) as session:
+        session.run(init)
+        print('==> restoring weights')
+        saver.restore(session, 'weights/task%s.weights' % model.config.task_id)
+        print('==> running model')
+        test_loss, test_accuracy = model.run_epoch(session, model.test)
+        print('Test accuracy:{}'.format(test_accuracy))
 
-if args.babi_task_id is not None:
-    config.babi_id = args.babi_task_id
 
-config.strong_supervision = False
+def init_config(task_id):
+    global config, word2vec, model
+    if config.word2vec_init:
+        if not word2vec:
+            word2vec = utils.load_glove()
+    else:
+        word2vec = {}
+    config.strong_supervision = False
+    config.train_mode = False
+    config.task_id = task_id
+    if config.reset:
+        tf.reset_default_graph()
+    if model is None:
+        model = Model(config, word2vec)
+    else:
+        model.config = config
+        model.init_global()
+    config.reset = True
+    main(model)
 
-config.train_mode = False
 
-print('Testing DMN ' + dmn_type + ' on babi task', config.babi_id)
+config = Config()
 
-# create model
-with tf.variable_scope('DMN') as scope:
-    if dmn_type == "original":
-        from dmn_original import DMN
-        model = DMN(config)
-    elif dmn_type == "plus":
-        from dmn_plus import DMN_PLUS
-        model = DMN_PLUS(config)
+model = None
+word2vec = None
 
-print('==> initializing variables')
-init = tf.global_variables_initializer()
-saver = tf.train.Saver()
+if __name__ == "__main__":
 
-with tf.Session() as session:
-    session.run(init)
-
-    print('==> restoring weights')
-    saver.restore(session, 'weights/task' +
-                  str(model.config.babi_id) + '.weights')
-
-    print('==> running DMN')
-    test_loss, test_accuracy = model.run_epoch(session, model.test)
-
-    print('')
-    print('Test accuracy:', test_accuracy)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-t", "--task_id",
+                        help="specify babi task 1-20 (default=1)")
+    args = parser.parse_args()
+    
+    init_config(args.task_id)

@@ -8,6 +8,7 @@ import time
 import argparse
 import os
 import properties as p
+import utils
 
 from model import Model, Config
 
@@ -69,8 +70,7 @@ def main(model, num_runs, restore):
                     if best_val_loss < best_overall_val_loss:
                         print('Saving weights')
                         best_overall_val_loss = best_val_loss
-                        saver.save(session, 'weights/task' +
-                                str(model.config.task_id) + '.weights')
+                        saver.save(session, 'weights/task%s.weights' % model.config.task_id)
                 # anneal
                 if train_loss > prev_epoch_loss * model.config.anneal_threshold:
                     model.config.lr /= model.config.anneal_by
@@ -89,14 +89,19 @@ def main(model, num_runs, restore):
 
 
 def init_config(task_id, restore=None, strong_supervision=None, l2_loss=None, num_runs=None):
-    global config
+    global config, word2vec
+    if config.word2vec_init:
+        if not word2vec:
+            word2vec = utils.load_glove()
+    else:
+        word2vec = {}
     config.l2 = l2_loss if l2_loss is not None else 0.001
     config.strong_supervision = strong_supervision if strong_supervision is not None else False
     num_runs = num_runs if num_runs is not None else '1'
     if task_id is not None:
         if ',' in task_id:
             tn = get_task_num(task_id, num_runs.split(','))
-            run_model(tn, restore)
+            loop_model(tn, restore)
         elif '-' in task_id:
             st_en = task_id.split('-')
             if len(st_en) < 2:
@@ -104,19 +109,30 @@ def init_config(task_id, restore=None, strong_supervision=None, l2_loss=None, nu
             st = st_en[0]
             en = st_en[-1]
             tn = get_task_num(np.arange(st, en), num_runs.split(','))
-            run_model(tn, restore)
+            loop_model(tn, restore)
         else:
             config.task_id = task_id
-            model = Model(config, word2vec)
-            main(model, int(num_runs[0]), restore)
+            run_model(config, word2vec, int(num_runs[0]), restore)
 
 
-def run_model(tasks, restore):
+def loop_model(tasks, restore):
     global config
     for task, num in tasks:
         config.task_id = task
+        run_model(config, word2vec, num, restore)
+
+
+def run_model(config, word2vec, num, restore):
+    global model
+    if config.reset:
+        tf.reset_default_graph()
+    if model is None:
         model = Model(config, word2vec)
-        main(model, num, restore)
+    else:
+        model.config = config
+        model.init_global()
+    config.reset = True
+    main(model, num, restore)
 
 
 def get_task_num(tasks, nums):
@@ -134,34 +150,9 @@ def get_task_num(tasks, nums):
     return tn
 
 
-def load_glove():
-    word2vec = {}
-    print("==> loading glove")
-    if not p.glove_file:
-        with open(("%s/glove.6B.%id.txt") % (p.glove_path, p.embed_size)) as f:
-            for line in f:
-                l = line.split()
-                word2vec[l[0]] = map(float, l[1:])
-    else:
-        with open(("%s/%s") % (p.glove_path, p.glove_file)) as f:
-            for line in f:
-                l = line.split()
-                word2vec[l[0]] = map(float, l[1:])
-
-    print("==> glove is loaded")
-
-    return word2vec
-
-
 config = Config()
-
+model = None
 word2vec = None
-if config.word2vec_init:
-    if not word2vec:
-        word2vec = load_glove()
-else:
-    word2vec = {}
-
 # init parameters in terminal
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
