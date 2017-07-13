@@ -211,7 +211,7 @@ def process_sentence(sent, word2vec, vocab, ivocab, embed_size):
                                 ivocab=ivocab,
                                 word_vector_size=embed_size,
                                 to_return="index"))
-        # process_characters(w, word2vec, vocab, ivocab, embed_size)
+        process_characters(w, word2vec, vocab, ivocab, embed_size)
     return s_v
 
 
@@ -380,11 +380,13 @@ def load_babi(config, word2vec, split_sentences=False, train_mode=True):
                 train = questions[:config.num_train], inputs[:config.num_train], q_lens[:config.num_train], \
                         input_lens[:config.num_train], input_masks[:config.num_train], answers[:config.num_train],  \
                         a_lens[:config.num_train], ans_label[:config.num_train], rel_labels[:config.num_train]
+                answers_valid = np.zeros_like(answers[config.num_train:], dtype=config.floatX)                        
                 valid = questions[config.num_train:], inputs[config.num_train:], q_lens[config.num_train:], \
-                    input_lens[config.num_train:], input_masks[config.num_train:], answers[config.num_train:],  \
+                    input_lens[config.num_train:], input_masks[config.num_train:], answers_valid,  \
                     a_lens[config.num_train:], ans_label[config.num_train:], rel_labels[config.num_train:]
             else:
                 train = questions, inputs, q_lens, input_lens, input_masks, answers, a_lens, ans_label, rel_labels
+                answers_valid = np.zeros_like(answers_d, dtype=config.floatX)
                 valid = questions_d, inputs_d, q_lens_d, input_lens_d, input_masks_d, answers_d, a_lens_d, ans_label_d, rel_labels_d
         else:
             # for softmax
