@@ -211,7 +211,7 @@ def process_sentence(sent, word2vec, vocab, ivocab, embed_size):
                                 ivocab=ivocab,
                                 word_vector_size=embed_size,
                                 to_return="index"))
-        process_characters(w, word2vec, vocab, ivocab, embed_size)
+        # process_characters(w, word2vec, vocab, ivocab, embed_size)
     return s_v
 
 
