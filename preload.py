@@ -351,13 +351,14 @@ def load_babi(config, word2vec, split_sentences=False, train_mode=True):
                  vocab=vocab,
                  ivocab=ivocab,
                  word_vector_size=p.embed_size,
-                 to_return="index")
-    process_word(word="<eos>",
-                 word2vec=word2vec,
-                 vocab=vocab,
-                 ivocab=ivocab,
-                 word_vector_size=p.embed_size,
-                 to_return="index")
+                 to_return="index",
+                 create_zeros=True)
+    # process_word(word="<eos>",
+    #              word2vec=word2vec,
+    #              vocab=vocab,
+    #              ivocab=ivocab,
+    #              word_vector_size=p.embed_size,
+    #              to_return="index")
 
     babi_raw, babi_dev_raw = get_babi_raw(config.task_id, config.babi_test_id, config.train_mode)
     data = process_input(babi_raw, config.floatX, word2vec,

@@ -40,7 +40,7 @@ def init_config(task_id):
         word2vec = {}
     config.batch_size = 10
     config.strong_supervision = False
-    config.train_mode = False
+    # config.train_mode = False
     config.task_id = task_id
     if config.reset:
         tf.reset_default_graph()
