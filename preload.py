@@ -119,17 +119,25 @@ def get_babi_raw(id, test_id, train_mode=True):
     return babi_raw
 
 
-def create_vector(word, word2vec, word_vector_size, silent=True):
-    # if the word is missing from Glove, create some fake vector and store in
-    # glove!
-    vector = np.random.uniform(0.0, 1.0, (word_vector_size,))
-    word2vec[word] = vector
+def create_vector(word, word2vec=None, word_vector_size=None, silent=True):
+    if word2vec is None:
+        # create zeros vector
+        vector = np.zeros((word_vector_size,))
+        word2vec[word] = vector
+    else:
+        # if the word is missing from Glove, create some fake vector and store in
+        # glove!
+        vector = np.random.uniform(0.0, 1.0, (word_vector_size,))
+        word2vec[word] = vector
     if (not silent):
         print("utils.py::create_vector => %s is missing" % word)
     return vector
 
 
-def process_word(word, word2vec, vocab, ivocab, word_vector_size, to_return="word2vec", silent=True):
+def process_word(word, word2vec=None, vocab=None, ivocab=None, word_vector_size=None, to_return="word2vec", silent=True):
+    if word2vec is None:
+        # mean create zeros vector
+        create_vector(word, word2vec, word_vector_size, silent)
     if not word in word2vec:
         create_vector(word, word2vec, word_vector_size, silent)
     if not word in vocab:
@@ -340,6 +348,12 @@ def load_babi(config, word2vec, split_sentences=False, train_mode=True):
     
     # set word at index zero to be end of sentence token so padding with zeros
     # is consistent
+    process_word(word="<unk>",
+                 word2vec=None,
+                 vocab=vocab,
+                 ivocab=ivocab,
+                 word_vector_size=p.embed_size,
+                 to_return="index")
     process_word(word="<eos>",
                  word2vec=word2vec,
                  vocab=vocab,

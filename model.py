@@ -459,6 +459,8 @@ class Model(object):
                         config.batch_size:(step + 1) * config.batch_size]
             else:
                 feed[self.answer_placeholder] = a[index]
+                if not train:
+                    print(a[index])
                 feed[self.answer_label_placeholder] = alb[index]
                 feed[self.answer_len_placeholder] = al[index]
                 answers = alb[step *

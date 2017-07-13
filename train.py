@@ -150,6 +150,11 @@ def get_task_num(tasks, nums):
     return tn
 
 
+def remove_w2v():
+    global word2vec
+    del word2vec
+
+
 config = Config()
 model = None
 word2vec = None
