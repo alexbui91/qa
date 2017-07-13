@@ -387,7 +387,7 @@ def load_babi(config, word2vec, split_sentences=False, train_mode=True):
             else:
                 train = questions, inputs, q_lens, input_lens, input_masks, answers, a_lens, ans_label, rel_labels
                 answers_valid = np.zeros_like(answers_d, dtype=config.floatX)
-                valid = questions_d, inputs_d, q_lens_d, input_lens_d, input_masks_d, answers_d, a_lens_d, ans_label_d, rel_labels_d
+                valid = questions_d, inputs_d, q_lens_d, input_lens_d, input_masks_d, answers_valid, a_lens_d, ans_label_d, rel_labels_d
         else:
             # for softmax
             if dev is None:
