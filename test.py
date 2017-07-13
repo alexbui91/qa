@@ -27,7 +27,7 @@ def main(model):
         print('==> restoring weights')
         saver.restore(session, 'weights/task%s.weights' % model.config.task_id)
         print('==> running model')
-        test_loss, test_accuracy = model.run_epoch(session, model.test, verbose=0)
+        test_loss, test_accuracy = model.run_epoch(session, model.valid, verbose=0)
         print("Test accuracy: %0.2f" % test_accuracy)
 
 

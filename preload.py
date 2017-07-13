@@ -103,19 +103,17 @@ def get_babi_raw(id, test_id, train_mode=True):
     babi_name = babi_map[id]
     babi_test_name = babi_map[test_id]
     babi_valid_raw = None
-    if train_mode:
-        print('==> get train inputs')
-        babi_train_raw = init_babi(os.path.join(os.path.dirname(os.path.realpath(
-            __file__)), 'data/%s/%s_train.txt' % (p.train_folder, babi_name)))
-        if 'valid' in p.train_folder:
-            babi_valid_raw = init_babi(os.path.join(os.path.dirname(os.path.realpath(
-                __file__)), 'data/%s/%s_valid.txt' % (p.train_folder, babi_name)))
-        babi_raw = (babi_train_raw, babi_valid_raw)
-    else:
-        print('==> get test inputs')
-        babi_test_raw = init_babi(os.path.join(os.path.dirname(os.path.realpath(
-            __file__)), 'data/%s/%s_test.txt' % (p.train_folder, babi_test_name)))
-        babi_raw = (babi_test_raw, babi_valid_raw)
+    print('==> get inputs')
+    babi_train_raw = init_babi(os.path.join(os.path.dirname(os.path.realpath(
+        __file__)), 'data/%s/%s_train.txt' % (p.train_folder, babi_name)))
+    if 'valid' in p.train_folder:
+        babi_valid_raw = init_babi(os.path.join(os.path.dirname(os.path.realpath(
+            __file__)), 'data/%s/%s_valid.txt' % (p.train_folder, babi_name)))
+    babi_raw = (babi_train_raw, babi_valid_raw)
+        # print('==> get test inputs')
+        # babi_test_raw = init_babi(os.path.join(os.path.dirname(os.path.realpath(
+        #     __file__)), 'data/%s/%s_test.txt' % (p.train_folder, babi_test_name)))
+        # babi_raw = (babi_test_raw, babi_valid_raw)
     return babi_raw
 
 
