@@ -24,7 +24,7 @@ class Config(object):
 
     batch_size = 100
 
-    max_epochs = 256
+    max_epochs = 1
     max_answer_len = 2
     early_stopping = 20
 

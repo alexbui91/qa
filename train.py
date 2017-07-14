@@ -100,7 +100,8 @@ def init_config(task_id, restore=None, strong_supervision=None, l2_loss=None, nu
     num_runs = num_runs if num_runs is not None else '1'
     if task_id is not None:
         if ',' in task_id:
-            tn = get_task_num(task_id, num_runs.split(','))
+            tn = get_task_num(task_id.split(','), num_runs.split(','))
+            print(tn)
             loop_model(tn, restore)
         elif '-' in task_id:
             st_en = task_id.split('-')
