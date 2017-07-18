@@ -90,9 +90,8 @@ def _position_encoding(sentence_size, embedding_size):
 
 class Model(object):
 
-    def __init__(self, config, glove):
+    def __init__(self, config):
         self.config = config
-        self.glove = glove
 
     def init_global(self):
         self.variables_to_save = {}
@@ -100,6 +99,9 @@ class Model(object):
         self.load_data(debug=False)
 
         self.init_ops()
+
+    def set_glove(self, glove):
+        self.glove = glove        
 
     def set_data(self, train, valid, word_embedding, max_q_len, max_input_len, max_sen_len, max_answer_len, rel_len, vocab_len):
         self.train = train
@@ -109,8 +111,8 @@ class Model(object):
         self.max_input_len = max_input_len
         self.max_sen_len = max_sen_len
         self.max_answer_len = max_answer_len
-        self.rel_len = rel_len
-        self.vocab_size = vocab_size
+        self.num_supporting_facts = rel_len
+        self.vocab_size = vocab_len
 
     def init_ops(self):
         with tf.device('/%s' % p.device):
@@ -139,6 +141,9 @@ class Model(object):
             self.vocab_size = preload.load_babi(self.config, self.glove, split_sentences=True, train_mode=self.config.train_mode)
         # plus one in max_answer_len for an addition eos character to comparison in cross_entropy
         # minus when perform rnn
+        self.set_encoding()
+
+    def set_encoding(self):
         # self.max_answer_len = self.max_answer_len + 1
         self.encoding = _position_encoding(
             self.max_sen_len, p.embed_size)
@@ -389,12 +394,11 @@ class Model(object):
             # like np.hstack but only get first index
             # labels = tf.gather(tf.transpose(self.rel_label_placeholder), 0)
             x = tf.transpose(self.rel_label_placeholder)
-            ind = x.get_shape()[0] - 1
-            labels = tf.gather(x, ind)
-            print(labels.get_shape())
-            for i, att in enumerate(self.attentions):
-                gate_loss += tf.reduce_sum(
-                    tf.nn.sparse_softmax_cross_entropy_with_logits(logits=att, labels=labels))
+            for t in xrange(x.get_shape()[0]):
+                labels = tf.gather(x, t)
+                for i, att in enumerate(self.attentions):
+                    gate_loss += tf.reduce_sum(
+                        tf.nn.sparse_softmax_cross_entropy_with_logits(logits=att, labels=labels))
         if self.config.answer_prediction == "rnn":
             # [-1] => reshape 1-D
             answer_flat = tf.reshape(self.answer_label_placeholder, shape=[-1])
@@ -445,70 +449,6 @@ class Model(object):
         return preds
 
     def run_epoch(self, session, data, num_epoch=0, train_writer=None, train_op=None, verbose=2, train=False):
-        config = self.config
-        dp = config.dropout
-        if train_op is None:
-            train_op = tf.no_op()
-            dp = 1
-        total_steps = len(data[0]) // config.batch_size
-        total_loss = []
-        accuracy = 0
-
-        # shuffle data
-        p = np.random.permutation(len(data[0]))
-        if config.answer_prediction == "softmax":
-            qp, ip, ql, il, a, r = data
-            qp, ip, ql, il, a, r = qp[p], ip[p], ql[p], il[p], a[p], r[p]
-        else:
-            qp, ip, ql, il, a, al, alb, r = data
-            qp, ip, ql, il, a, al, alb, r = qp[p], ip[p], ql[p], il[p], a[p], al[p], alb[p], r[p]
-
-        for step in range(total_steps):
-            index = range(step * config.batch_size,
-                          (step + 1) * config.batch_size)
-            feed = {self.question_placeholder: qp[index],
-                    self.input_placeholder: ip[index],
-                    self.question_len_placeholder: ql[index],
-                    self.input_len_placeholder: il[index],
-                    self.dropout_placeholder: dp}
-            if config.answer_prediction == "softmax":
-                feed[self.answer_label_placeholder] = a[index]
-                answers = a[step *
-                        config.batch_size:(step + 1) * config.batch_size]
-            else:
-                feed[self.answer_placeholder] = a[index]
-                feed[self.answer_label_placeholder] = alb[index]
-                feed[self.answer_len_placeholder] = al[index]
-                answers = alb[step *
-                        config.batch_size:(step + 1) * config.batch_size]
-            if config.strong_supervision:
-                feed[self.rel_label_placeholder] = r[index]
-
-            loss, pred, summary, _ = session.run(
-                [self.calculate_loss, self.pred, self.merged, train_op], feed_dict=feed)
-
-            if train_writer is not None:
-                train_writer.add_summary(
-                    summary, num_epoch * total_steps + step)
-
-            if config.answer_prediction == "softmax":
-                accuracy += np.sum(pred == answers) / float(len(answers))
-            else:
-                ans_length = len(np.hstack(answers))
-                accuracy += np.sum(pred == answers) / float(ans_length)
-            total_loss.append(loss)
-            if verbose and step % verbose == 0:
-                sys.stdout.write('\r{} / {} : loss = {}'.format(
-                    step, total_steps, np.mean(total_loss)))
-                sys.stdout.flush()
-        if verbose:
-            sys.stdout.write('\r')
-        avg_acc = 0.
-        if total_steps:
-            avg_acc = accuracy / float(total_steps)
-        return np.mean(total_loss), avg_acc
-
-    def run_epoch_squad(self, session, data, num_epoch=0, train_writer=None, train_op=None, verbose=2, train=False):
         config = self.config
         dp = config.dropout
         if train_op is None:

@@ -128,7 +128,8 @@ def run_model(config, word2vec, num, restore):
     if config.reset:
         tf.reset_default_graph()
     if model is None:
-        model = Model(config, word2vec)
+        model = Model(config)
+        model.set_glove(word2vec)
         model.init_global()
     else:
         model.config = config
