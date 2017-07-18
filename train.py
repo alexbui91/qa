@@ -95,13 +95,13 @@ def init_config(task_id, restore=None, strong_supervision=None, l2_loss=None, nu
             word2vec = utils.load_glove()
     else:
         word2vec = {}
+    # config.strong_supervision = True
     config.l2 = l2_loss if l2_loss is not None else 0.001
     config.strong_supervision = strong_supervision if strong_supervision is not None else False
     num_runs = num_runs if num_runs is not None else '1'
     if task_id is not None:
         if ',' in task_id:
             tn = get_task_num(task_id.split(','), num_runs.split(','))
-            print(tn)
             loop_model(tn, restore)
         elif '-' in task_id:
             st_en = task_id.split('-')
@@ -129,6 +129,7 @@ def run_model(config, word2vec, num, restore):
         tf.reset_default_graph()
     if model is None:
         model = Model(config, word2vec)
+        model.init_global()
     else:
         model.config = config
         model.init_global()
