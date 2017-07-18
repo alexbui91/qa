@@ -156,7 +156,7 @@ def process_input(data_raw, floatX, word2vec, vocab, ivocab, embed_size, split_s
     questions = []
     inputs = []
     answers = []
-    input_masks = []
+    # input_masks = []
     relevant_labels = []
     for x in data_raw:
         #inp_vector is list of indexes of word_vector in vocabs
@@ -205,7 +205,7 @@ def process_input(data_raw, floatX, word2vec, vocab, ivocab, embed_size, split_s
         #         raise Exception("invalid input_mask_mode")
 
         relevant_labels.append(x["S"])
-    return inputs, questions, answers, input_masks, relevant_labels
+    return inputs, questions, answers, relevant_labels
 
 
 def process_sentence(sent, word2vec, vocab, ivocab, embed_size):
@@ -289,7 +289,7 @@ def create_embedding(word2vec, ivocab, embed_size):
 
 def get_max_len(config, data, maxs):
     max_input_len, max_sen_len, max_q_len, max_answer_len = maxs
-    inputs, questions, answers, input_masks, rel_labels = data
+    inputs, questions, answers, rel_labels = data
     #context len
     input_lens, sen_lens, max_sen_len = get_sentence_lens(inputs)
 
@@ -314,7 +314,7 @@ def process_data(config, data, lens, maxs, train_mode=True):
     max_mask_len = max_sen_len
 
     input_lens, sen_lens, q_lens, a_lens = lens
-    inputs, questions, answers, input_masks, rel_labels = data
+    inputs, questions, answers, rel_labels = data
     ans_label = None
     
     # pad answer
@@ -329,7 +329,7 @@ def process_data(config, data, lens, maxs, train_mode=True):
     # pad out arrays to max
     inputs = pad_inputs(inputs, input_lens, max_input_len,
                         "split_sentences", sen_lens, max_sen_len)
-    input_masks = np.zeros(len(inputs))
+    # input_masks = np.zeros(len(inputs))
     
     questions = pad_inputs(questions, q_lens, max_q_len)
     rel_labels = np.zeros((len(rel_labels), len(rel_labels[0])))
@@ -337,7 +337,7 @@ def process_data(config, data, lens, maxs, train_mode=True):
     for i, tt in enumerate(rel_labels):
         rel_labels[i] = np.array(tt, dtype=int)
     
-    return inputs, input_masks, questions, answers, ans_label, rel_labels
+    return inputs, questions, answers, ans_label, rel_labels
 
 
 def load_babi(config, word2vec, split_sentences=False, train_mode=True):
@@ -381,9 +381,9 @@ def load_babi(config, word2vec, split_sentences=False, train_mode=True):
         input_lens_d, max_input_len, sen_lens_d, max_sen_len, q_lens_d, max_q_len, a_lens_d, max_answer_len = get_max_len(config, dev, maxs)
         maxs = (max_input_len, max_sen_len, max_q_len, max_answer_len)
         lens_d = (input_lens_d, sen_lens_d, q_lens_d, a_lens_d)
-        inputs_d, input_masks_d, questions_d, answers_d, ans_label_d, rel_labels_d = process_data(config, dev, lens_d, maxs, train_mode)
+        inputs_d, questions_d, answers_d, ans_label_d, rel_labels_d = process_data(config, dev, lens_d, maxs, train_mode)
     lens = (input_lens, sen_lens, q_lens, a_lens)
-    inputs, input_masks, questions, answers, ans_label, rel_labels = process_data(config, data, lens, maxs, train_mode)
+    inputs, questions, answers, ans_label, rel_labels = process_data(config, data, lens, maxs, train_mode)
     max_mask_len = max_sen_len
     if config.train_mode:
         #separate part of train data to valid
@@ -391,33 +391,33 @@ def load_babi(config, word2vec, split_sentences=False, train_mode=True):
             # for rnn
             if dev is None:
                 train = questions[:config.num_train], inputs[:config.num_train], q_lens[:config.num_train], \
-                        input_lens[:config.num_train], input_masks[:config.num_train], answers[:config.num_train],  \
+                        input_lens[:config.num_train], answers[:config.num_train],  \
                         a_lens[:config.num_train], ans_label[:config.num_train], rel_labels[:config.num_train]
                 answers_valid = np.zeros_like(answers[config.num_train:], dtype=config.floatX)                        
                 valid = questions[config.num_train:], inputs[config.num_train:], q_lens[config.num_train:], \
-                    input_lens[config.num_train:], input_masks[config.num_train:], answers_valid,  \
+                    input_lens[config.num_train:], answers_valid,  \
                     a_lens[config.num_train:], ans_label[config.num_train:], rel_labels[config.num_train:]
             else:
-                train = questions, inputs, q_lens, input_lens, input_masks, answers, a_lens, ans_label, rel_labels
+                train = questions, inputs, q_lens, input_lens, answers, a_lens, ans_label, rel_labels
                 answers_valid = np.zeros_like(answers_d, dtype=config.floatX)
-                valid = questions_d, inputs_d, q_lens_d, input_lens_d, input_masks_d, answers_valid, a_lens_d, ans_label_d, rel_labels_d
+                valid = questions_d, inputs_d, q_lens_d, input_lens_d, answers_valid, a_lens_d, ans_label_d, rel_labels_d
         else:
             # for softmax
             if dev is None:
                 train = questions[:config.num_train], inputs[:config.num_train], q_lens[:config.num_train], \
-                        input_lens[:config.num_train], input_masks[:config.num_train], answers[:config.num_train],  \
+                        input_lens[:config.num_train], answers[:config.num_train],  \
                         rel_labels[:config.num_train]
                 valid = questions[config.num_train:], inputs[config.num_train:], q_lens[config.num_train:], \
-                        input_lens[config.num_train:], input_masks[config.num_train:], answers[config.num_train:],  \
+                        input_lens[config.num_train:], answers[config.num_train:],  \
                         rel_labels[config.num_train:]
             else: 
-                train = questions, inputs, q_lens, input_lens, input_masks, answers, rel_labels
-                valid = questions_d, inputs_d, q_lens_d, input_lens_d, input_masks_d, answers_d, rel_labels_d
+                train = questions, inputs, q_lens, input_lens, answers, rel_labels
+                valid = questions_d, inputs_d, q_lens_d, input_lens_d, answers_d, rel_labels_d
         return train, valid, word_embedding, max_q_len, max_input_len, max_mask_len, max_answer_len, rel_labels.shape[1], len(vocab)
     else:
         if a_lens is not None:
             # for rnn
-            test = questions, inputs, q_lens, input_lens, input_masks, answers, a_lens, ans_label, rel_labels
+            test = questions, inputs, q_lens, input_lens, answers, a_lens, ans_label, rel_labels
         else:
-            test = questions, inputs, q_lens, input_lens, input_masks, answers, rel_labels
+            test = questions, inputs, q_lens, input_lens, answers, rel_labels
         return test, word_embedding, max_q_len, max_input_len, max_mask_len, max_answer_len, rel_labels.shape[1], len(vocab)

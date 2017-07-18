@@ -101,8 +101,16 @@ class Model(object):
 
         self.init_ops()
 
-    def set_data(self):
-        return 0
+    def set_data(self, train, valid, word_embedding, max_q_len, max_input_len, max_sen_len, max_answer_len, rel_len, vocab_len):
+        self.train = train
+        self.valid = valid
+        self.word_embedding = word_embedding
+        self.max_q_len = max_q_len
+        self.max_input_len = max_input_len
+        self.max_sen_len = max_sen_len
+        self.max_answer_len = max_answer_len
+        self.rel_len = rel_len
+        self.vocab_size = vocab_size
 
     def init_ops(self):
         with tf.device('/%s' % p.device):
@@ -381,27 +389,24 @@ class Model(object):
             # like np.hstack but only get first index
             # labels = tf.gather(tf.transpose(self.rel_label_placeholder), 0)
             x = tf.transpose(self.rel_label_placeholder)
-            ind = x[0] - 1
+            ind = x.get_shape()[0] - 1
             labels = tf.gather(x, ind)
             print(labels.get_shape())
             for i, att in enumerate(self.attentions):
                 gate_loss += tf.reduce_sum(
                     tf.nn.sparse_softmax_cross_entropy_with_logits(logits=att, labels=labels))
         if self.config.answer_prediction == "rnn":
+            # [-1] => reshape 1-D
             answer_flat = tf.reshape(self.answer_label_placeholder, shape=[-1])
+            # output shape: batch_size x max_answer x vocab_size
             output = tf.reshape(output, shape=[self.config.batch_size * self.max_answer_len, self.vocab_size])
             # print("answer_flat", answer_flat)
             # print("output", output)
-            """
-                answer_flat Tensor("DMN/Reshape_2:0", shape=(200,), dtype=int64)
-                output Tensor("DMN/Reshape_3:0", shape=(300, 24), dtype=float32)
-            """
+         
             loss = self.config.beta * tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(
                 logits=output, labels=answer_flat)) + gate_loss
         else:
-            """ answer Tensor("DMN/Placeholder_6:0", shape=(100,), dtype=int64)
-                output Tensor("DMN/answer/output_prediction_softmax/BiasAdd:0", shape=(?, 32), dtype=float32)
-            """
+           
             # print("answer", self.answer_label_placeholder)
             # print("output", output)
             loss = self.config.beta * tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -452,11 +457,11 @@ class Model(object):
         # shuffle data
         p = np.random.permutation(len(data[0]))
         if config.answer_prediction == "softmax":
-            qp, ip, ql, il, im, a, r = data
-            qp, ip, ql, il, im, a, r = qp[p], ip[p], ql[p], il[p], im[p], a[p], r[p]
+            qp, ip, ql, il, a, r = data
+            qp, ip, ql, il, a, r = qp[p], ip[p], ql[p], il[p], a[p], r[p]
         else:
-            qp, ip, ql, il, im, a, al, alb, r = data
-            qp, ip, ql, il, im, a, al, alb, r = qp[p], ip[p], ql[p], il[p], im[p], a[p], al[p], alb[p], r[p]
+            qp, ip, ql, il, a, al, alb, r = data
+            qp, ip, ql, il, a, al, alb, r = qp[p], ip[p], ql[p], il[p], a[p], al[p], alb[p], r[p]
 
         for step in range(total_steps):
             index = range(step * config.batch_size,
@@ -516,11 +521,11 @@ class Model(object):
         # shuffle data
         p = np.random.permutation(len(data[0]))
         if config.answer_prediction == "softmax":
-            qp, ip, ql, il, im, a, r = data
-            qp, ip, ql, il, im, a, r = qp[p], ip[p], ql[p], il[p], im[p], a[p], r[p]
+            qp, ip, ql, il, a, r = data
+            qp, ip, ql, il, a, r = qp[p], ip[p], ql[p], il[p], a[p], r[p]
         else:
-            qp, ip, ql, il, im, a, al, alb, r = data
-            qp, ip, ql, il, im, a, al, alb, r = qp[p], ip[p], ql[p], il[p], im[p], a[p], al[p], alb[p], r[p]
+            qp, ip, ql, il, a, al, alb, r = data
+            qp, ip, ql, il, a, al, alb, r = qp[p], ip[p], ql[p], il[p], a[p], al[p], alb[p], r[p]
 
         for step in range(total_steps):
             index = range(step * config.batch_size,
