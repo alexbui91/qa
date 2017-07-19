@@ -9,3 +9,4 @@
 *.xlsx
 *.gz
 properties.py
+/squad

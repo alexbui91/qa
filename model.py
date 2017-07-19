@@ -103,17 +103,6 @@ class Model(object):
     def set_glove(self, glove):
         self.glove = glove        
 
-    def set_data(self, train, valid, word_embedding, max_q_len, max_input_len, max_sen_len, max_answer_len, rel_len, vocab_len):
-        self.train = train
-        self.valid = valid
-        self.word_embedding = word_embedding
-        self.max_q_len = max_q_len
-        self.max_input_len = max_input_len
-        self.max_sen_len = max_sen_len
-        self.max_answer_len = max_answer_len
-        self.num_supporting_facts = rel_len
-        self.vocab_size = vocab_len
-
     def init_ops(self):
         with tf.device('/%s' % p.device):
             # init memory
@@ -187,7 +176,6 @@ class Model(object):
         """Get question vectors via embedding and GRU"""
         questions = tf.nn.embedding_lookup(
             embeddings, self.question_placeholder)
-            
         gru_cell = tf.contrib.rnn.GRUCell(p.hidden_size)
         _, q_vec = tf.nn.dynamic_rnn(gru_cell,
                                      questions,
@@ -201,11 +189,8 @@ class Model(object):
         """Get fact (sentence) vectors via embedding, positional encoding and bi-directional GRU"""
         # get word vectors from embedding
         inputs = tf.nn.embedding_lookup(embeddings, self.input_placeholder)
-
         # use encoding to get sentence representation plus position encoding
         # (like fb represent)
-        inputs = tf.reduce_sum(inputs * self.encoding, 2)
-
         forward_gru_cell = tf.contrib.rnn.GRUCell(p.hidden_size)
         backward_gru_cell = tf.contrib.rnn.GRUCell(p.hidden_size)
         # outputs with [batch_size, max_time, cell_bw.output_size]
@@ -345,7 +330,6 @@ class Model(object):
         # set up embedding
         embeddings = tf.Variable(
             self.word_embedding.astype(np.float32), name="Embedding")
-            
         # input fusion module
         with tf.variable_scope("question", initializer=tf.contrib.layers.xavier_initializer()):
             print('==> get question representation')
