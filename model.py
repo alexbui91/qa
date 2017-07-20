@@ -189,8 +189,11 @@ class Model(object):
         """Get fact (sentence) vectors via embedding, positional encoding and bi-directional GRU"""
         # get word vectors from embedding
         inputs = tf.nn.embedding_lookup(embeddings, self.input_placeholder)
+        
         # use encoding to get sentence representation plus position encoding
         # (like fb represent)
+        inputs = tf.reduce_sum(inputs * self.encoding, 2)
+        
         forward_gru_cell = tf.contrib.rnn.GRUCell(p.hidden_size)
         backward_gru_cell = tf.contrib.rnn.GRUCell(p.hidden_size)
         # outputs with [batch_size, max_time, cell_bw.output_size]

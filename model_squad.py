@@ -178,6 +178,30 @@ class ModelSquad(Model):
 
         return (output_s, output_e)
 
+    def get_input_representation(self, embeddings):
+        """Get fact (sentence) vectors via embedding, positional encoding and bi-directional GRU"""
+        # get word vectors from embedding
+        inputs = tf.nn.embedding_lookup(embeddings, self.input_placeholder)
+        # use encoding to get sentence representation plus position encoding
+        # (like fb represent)
+        forward_gru_cell = tf.contrib.rnn.GRUCell(p.hidden_size)
+        backward_gru_cell = tf.contrib.rnn.GRUCell(p.hidden_size)
+        # outputs with [batch_size, max_time, cell_bw.output_size]
+        outputs, _ = tf.nn.bidirectional_dynamic_rnn(
+            forward_gru_cell,
+            backward_gru_cell,
+            inputs,
+            dtype=np.float32,
+            sequence_length=self.input_len_placeholder
+        )
+
+        # f<-> = f-> + f<-
+        fact_vecs = tf.reduce_sum(tf.stack(outputs), axis=0)
+        # apply dropout
+        fact_vecs = tf.nn.dropout(fact_vecs, self.dropout_placeholder)
+        # outputs with [batch_size, max_time, cell_bw.output_size = d]
+        return fact_vecs
+
     def add_loss_op(self, output):
         output_s, output_e = output
         """Calculate loss"""
@@ -186,12 +210,11 @@ class ModelSquad(Model):
         if self.config.strong_supervision:
             # like np.hstack but only get first index
             # labels = tf.gather(tf.transpose(self.rel_label_placeholder), 0)
-            x = tf.transpose(self.rel_label_placeholder)
-            ind = x.get_shape()[0] - 1
-            labels = tf.gather(x, ind)
             for i, att in enumerate(self.attentions):
                 gate_loss += tf.reduce_sum(
-                    tf.nn.sparse_softmax_cross_entropy_with_logits(logits=att, labels=labels))
+                    tf.nn.sparse_softmax_cross_entropy_with_logits(logits=att, labels=self.start_placeholder))
+                gate_loss += tf.reduce_sum(
+                    tf.nn.sparse_softmax_cross_entropy_with_logits(logits=att, labels=self.end_placeholder))
 
         loss = (tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(
             logits=output_s, labels=self.start_placeholder)) + \
