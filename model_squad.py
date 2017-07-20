@@ -184,8 +184,8 @@ class ModelSquad(Model):
         inputs = tf.nn.embedding_lookup(embeddings, self.input_placeholder)
         # use encoding to get sentence representation plus position encoding
         # (like fb represent)
-        forward_gru_cell = tf.contrib.rnn.GRUCell(p.hidden_size)
-        backward_gru_cell = tf.contrib.rnn.GRUCell(p.hidden_size)
+        forward_gru_cell = tf.contrib.rnn.LSTMCell(p.hidden_size)
+        backward_gru_cell = tf.contrib.rnn.LSTMCell(p.hidden_size)
         # outputs with [batch_size, max_time, cell_bw.output_size]
         outputs, _ = tf.nn.bidirectional_dynamic_rnn(
             forward_gru_cell,
@@ -290,8 +290,8 @@ class ModelSquad(Model):
             start = s[step * config.batch_size:(step + 1) * config.batch_size]
             end = e[step * config.batch_size:(step + 1) * config.batch_size]
             
-            if config.strong_supervision:
-                feed[self.rel_label_placeholder] = r[index]
+            # if config.strong_supervision:
+            #     feed[self.rel_label_placeholder] = r[index]
 
             loss, pred, summary, _ = session.run(
                 [self.calculate_loss, self.pred, self.merged, train_op], feed_dict=feed)

@@ -242,7 +242,6 @@ def get_vocabs_from_text():
         v_ = v.replace('\n', '')
         if (not v_ is '') and (v_ not in vocabs):
             vocabs[v_] = len(vocabs)
-    print(len(vocabs))
     return vocabs
 
 
