@@ -2,6 +2,7 @@ import utils as u
 import tensorflow as tf
 import numpy as np
 import os
+import sys
 import time
 
 from model import Config
@@ -57,7 +58,7 @@ def main(restore=False):
     model.set_data(train, dev, word_embedding, np.shape(questions)[1], np.shape(contexts)[1], np.shape(answers)[1], len(word_embedding))
     model.set_encoding()
     model.init_ops()
-    
+
      # tf.reset_default_graph()
     print('Start training DMN on squad')
     # model.init_data_node()

@@ -44,6 +44,7 @@ class ModelSquad(Model):
     
         self.input_placeholder = tf.placeholder(tf.int32, shape=(
             self.config.batch_size, self.max_input_len))  
+
         # placeholder for length of rnn 
         self.question_len_placeholder = tf.placeholder(
             tf.int32, shape=(self.config.batch_size,))
@@ -119,17 +120,19 @@ class ModelSquad(Model):
         # episode is latest memory
         return episode
 
-    def add_answer_module(self, rnn_output, q_vec, embeddings):
+    def add_answer_module(self, rnn_output, q_vec, embeddings, reuse=False):
         # currently use just 1 single output answer
         rnn_output = tf.nn.dropout(rnn_output, self.dropout_placeholder)
         output_s = tf.layers.dense(tf.concat([rnn_output, q_vec], 1),
                                 self.max_input_len,
                                 activation=None,
-                                name="output_prediction_start")
+                                name="output_prediction_start",
+                                reuse=reuse)
         output_e = tf.layers.dense(tf.concat([rnn_output, q_vec], 1),
                                 self.max_input_len,
                                 activation=None,
-                                name="output_prediction_end")
+                                name="output_prediction_end",
+                                reuse=reuse)
         return output_s, output_e
 
     def inference(self):
@@ -157,24 +160,42 @@ class ModelSquad(Model):
             # generate n_hops episodes
             # loop to generate memory over multiple hops
             prev_memory = q_vec
-
-            for i in range(self.config.num_hops):
+            a_s = tf.zeros_like(q_vec, dtype=self.config.floatX)
+            a_e = tf.zeros_like(q_vec, dtype=self.config.floatX)
+            output_s = tf.zeros_like(q_vec, dtype=self.config.floatX)
+            output_e = tf.zeros_like(q_vec, dtype=self.config.floatX)
+            
+            for i in xrange(self.config.num_hops):
                 # get a new episode
                 print('==> generating episode', i)
                 episode = self.generate_episode(
                     prev_memory, q_vec, fact_vecs, i)
 
+                # in last time prediction, push real answer to memory
+                if i == (self.config.num_hops - 1):
+                    a_e = self.get_answer_representation(self.start_placeholder, embeddings)
+                    a_s = self.get_answer_representation(self.start_placeholder, embeddings)
+                
                 # untied weights for memory update
                 with tf.variable_scope("hop_%d" % i):
-                    prev_memory = tf.layers.dense(tf.concat([prev_memory, episode, q_vec], 1),
+                    # at first time, use zeros vector
+                    prev_memory = tf.layers.dense(tf.concat([prev_memory, episode, q_vec, a_s, a_e], 1),
                                                   p.hidden_size,
                                                   activation=tf.nn.relu)
-
-            output = prev_memory
-
+                    output = prev_memory
+                
+                # pass memory module output through linear answer module
+                with tf.variable_scope("answer", initializer=tf.contrib.layers.xavier_initializer()):
+                    output_s, output_e = self.add_answer_module(output, q_vec, embeddings, bool(i))
+                    # if i still smaller than pen_final_hops, use predicted answer for next memory
+                    if i < self.config.num_hops - 2:
+                        pred_s, pred_e = self.get_predictions((output_s, output_e))
+                        a_e = self.get_answer_representation(pred_s, embeddings)
+                        a_s = self.get_answer_representation(pred_e, embeddings)
+            
         # pass memory module output through linear answer module
-        with tf.variable_scope("answer", initializer=tf.contrib.layers.xavier_initializer()):
-            output_s, output_e = self.add_answer_module(output, q_vec, embeddings)
+        # with tf.variable_scope("answer", initializer=tf.contrib.layers.xavier_initializer()):
+        #     output_s, output_e = self.add_answer_module(output, q_vec, embeddings)
 
         return (output_s, output_e)
 
@@ -201,6 +222,9 @@ class ModelSquad(Model):
         fact_vecs = tf.nn.dropout(fact_vecs, self.dropout_placeholder)
         # outputs with [batch_size, max_time, cell_bw.output_size = d]
         return fact_vecs
+
+    def get_answer_representation(self, placeholder, embeddings):
+        return tf.nn.embedding_lookup(embeddings, placeholder)
 
     def add_loss_op(self, output):
         output_s, output_e = output
