@@ -4,6 +4,7 @@ import numpy as np
 import os
 import sys
 import time
+import argparse
 
 from model import Config
 from model_squad import ModelSquad
@@ -129,4 +130,8 @@ def main(restore=False):
 
 if __name__ == "__main__":
     # preload_vocabs()
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-r", "--restore",
+                        help="restore previously trained weights (default=false)")
+
+    main(args.restore)
