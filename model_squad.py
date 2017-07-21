@@ -173,9 +173,9 @@ class ModelSquad(Model):
                     prev_memory, q_vec, fact_vecs, i)
 
                 # in last time prediction, push real answer to memory
-                if i == (self.config.num_hops - 1):
-                    a_e = self.get_answer_representation(self.start_placeholder, embeddings)
-                    a_s = self.get_answer_representation(self.start_placeholder, embeddings)
+                # if i == (self.config.num_hops - 1):
+                #     a_e = self.get_answer_representation(self.start_placeholder, embeddings)
+                #     a_s = self.get_answer_representation(self.start_placeholder, embeddings)
                 
                 # untied weights for memory update
                 with tf.variable_scope("hop_%d" % i):
@@ -189,7 +189,7 @@ class ModelSquad(Model):
                 with tf.variable_scope("answer", initializer=tf.contrib.layers.xavier_initializer()):
                     output_s, output_e = self.add_answer_module(output, q_vec, embeddings, bool(i))
                     # if i still smaller than pen_final_hops, use predicted answer for next memory
-                    if i < self.config.num_hops - 2:
+                    if i < self.config.num_hops - 1:
                         pred_s, pred_e = self.get_predictions((output_s, output_e))
                         a_e = self.get_answer_representation(pred_s, embeddings)
                         a_s = self.get_answer_representation(pred_e, embeddings)
