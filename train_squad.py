@@ -133,5 +133,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-r", "--restore",
                         help="restore previously trained weights (default=false)")
-
+    
+    args = parser.parse_args()
+    
     main(args.restore)
