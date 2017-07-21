@@ -24,7 +24,6 @@ class ModelSquad(Model):
 
     def __init__(self, config):
         self.config = config
-        self.is_training = True
 
     def set_data(self, train, valid, word_embedding, max_q_len, \
                 max_input_len, max_answer_len, vocab_len):
@@ -225,11 +224,7 @@ class ModelSquad(Model):
         return fact_vecs
 
     def get_answer_representation(self, placeholder, embeddings):
-        if self.is_training:
-            an_v = tf.nn.embedding_lookup(embeddings, placeholder)
-        else:
-            an_v = tf.zeros_like(placeholder)
-        return an_v
+        return tf.nn.embedding_lookup(embeddings, placeholder)
 
     def add_loss_op(self, output):
         output_s, output_e = output
@@ -288,7 +283,6 @@ class ModelSquad(Model):
         return pred_s, pred_e
 
     def run_epoch(self, session, data, num_epoch=0, train_writer=None, train_op=None, verbose=2, train=False):
-        self.is_training = train
         config = self.config
         dp = config.dropout
         if train_op is None:
