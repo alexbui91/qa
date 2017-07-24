@@ -159,8 +159,13 @@ class ModelSquad(Model):
             attentions = tf.nn.softmax(attentions)
             attentions = tf.unstack(attentions, axis=1)
             # l x b x d
-            attentions = [a * e for a, e in zip(e_outputs, attentions)]
-            attentions = tf.stack(attentions)
+            tmp = list()
+            # e: b x d
+            # a: b
+            for e, a in zip(e_outputs, attentions):
+                tmp.append(tf.stack([e_b * e_a for e_b, e_a in zip(tf.unstack(e), tf.unstack(a))]))
+
+            attentions = tf.stack(tmp)
             # b x d
             c = tf.reduce_sum(attentions, 0)
             # b x d
