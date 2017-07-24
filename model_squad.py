@@ -9,6 +9,8 @@ from copy import deepcopy
 
 import tensorflow as tf
 from attention_gru_cell import AttentionGRUCell
+from tensorflow.contrib.rnn import GRUCell
+
 
 from tensorflow.contrib.cudnn_rnn.python.ops import cudnn_rnn_ops
 
@@ -50,7 +52,8 @@ class ModelSquad(Model):
             tf.int32, shape=(self.config.batch_size,))
         self.input_len_placeholder = tf.placeholder(
             tf.int32, shape=(self.config.batch_size,))
-    
+        self.pred_len_placeholder = tf.placeholder(
+            tf.int32, shape=(self.config.batch_size,))
         # place holder for start vs end position
 
         self.start_placeholder = tf.placeholder(
@@ -58,7 +61,7 @@ class ModelSquad(Model):
         
         self.end_placeholder = tf.placeholder(
             tf.int64, shape=(self.config.batch_size,))
-        
+
         self.dropout_placeholder = tf.placeholder(tf.float32)
 
     def get_attention(self, q_vec, prev_memory, fact_vec, reuse):
@@ -112,13 +115,13 @@ class ModelSquad(Model):
         gru_inputs = tf.concat([fact_vecs, attentions], 2)
         # GRU - RNN to generate final e
         with tf.variable_scope('attention_gru', reuse=reuse):
-            _, episode = tf.nn.dynamic_rnn(AttentionGRUCell(p.hidden_size),
+            outputs, episode = tf.nn.dynamic_rnn(AttentionGRUCell(p.hidden_size),
                                            gru_inputs,
                                            dtype=np.float32,
                                            sequence_length=self.input_len_placeholder
                                            )
         # episode is latest memory
-        return episode
+        return outputs, episode
 
     def add_answer_module(self, rnn_output, q_vec, embeddings, reuse=False):
         # currently use just 1 single output answer
@@ -134,6 +137,40 @@ class ModelSquad(Model):
                                 name="output_prediction_end",
                                 reuse=reuse)
         return output_s, output_e
+
+    # get activation at timestep t
+    def get_memory_attention(self, prev_memory, fact_vec, reuse):
+        # output_e with size b x d
+        return tf.layers.dense(tf.concat([prev_memory, fact_vec], 1),
+                                1,
+                                activation=tf.tanh,
+                                name="generate_activation",
+                                reuse=reuse)
+
+    def predict_position(self, m_GRU, prev_memory, e_outputs, is_iteration=True, reuse=False):
+        attentions = [tf.squeeze(
+                self.get_memory_attention(prev_memory, e, reuse or bool(i)), axis=1)
+                for i, e in enumerate(e_outputs)]
+
+        attentions = tf.transpose(tf.stack(attentions))
+                
+        if is_iteration:
+            # a: b x l
+            attentions = tf.nn.softmax(attentions)
+            attentions = tf.unstack(attentions, axis=1)
+            # l x b x d
+            attentions = [a * e for a, e in zip(e_outputs, attentions)]
+            attentions = tf.stack(attentions)
+            # b x d
+            c = tf.reduce_sum(attentions, 0)
+            # b x d
+            _, prev_memory = tf.nn.dynamic_rnn(m_GRU,
+                                tf.expand_dims(c, 1),
+                                dtype=np.float32,
+                                sequence_length=self.pred_len_placeholder,
+                                initial_state=prev_memory
+                                )
+        return attentions
 
     def inference(self):
         """Performs inference on the DMN model"""
@@ -157,45 +194,27 @@ class ModelSquad(Model):
         with tf.variable_scope("memory", initializer=tf.contrib.layers.xavier_initializer()):
             print('==> build episodic memory')
 
-            # generate n_hops episodes
-            # loop to generate memory over multiple hops
-            prev_memory = q_vec
-            a_s = tf.zeros_like(q_vec, dtype=self.config.floatX)
-            a_e = tf.zeros_like(q_vec, dtype=self.config.floatX)
-            output_s = tf.zeros_like(q_vec, dtype=self.config.floatX)
-            output_e = tf.zeros_like(q_vec, dtype=self.config.floatX)
-            
-            for i in xrange(self.config.num_hops):
-                # get a new episode
-                print('==> generating episode', i)
-                episode = self.generate_episode(
-                    prev_memory, q_vec, fact_vecs, i)
+            prev_memory = q_vec 
 
-                # in last time prediction, push real answer to memory
-                # if i == (self.config.num_hops - 1):
-                #     a_e = self.get_answer_representation(self.start_placeholder, embeddings)
-                #     a_s = self.get_answer_representation(self.start_placeholder, embeddings)
-                
-                # untied weights for memory update
-                with tf.variable_scope("hop_%d" % i):
-                    # at first time, use zeros vector
-                    prev_memory = tf.layers.dense(tf.concat([prev_memory, episode, q_vec, a_s, a_e], 1),
-                                                  p.hidden_size,
-                                                  activation=tf.nn.relu)
-                    output = prev_memory
-                
-                # pass memory module output through linear answer module
-                with tf.variable_scope("answer", initializer=tf.contrib.layers.xavier_initializer()):
-                    output_s, output_e = self.add_answer_module(output, q_vec, embeddings, bool(i))
-                    # if i still smaller than pen_final_hops, use predicted answer for next memory
-                    if i < self.config.num_hops - 1:
-                        pred_s, pred_e = self.get_predictions((output_s, output_e))
-                        a_e = self.get_answer_representation(pred_s, embeddings)
-                        a_s = self.get_answer_representation(pred_e, embeddings)
-            
-        # pass memory module output through linear answer module
-        # with tf.variable_scope("answer", initializer=tf.contrib.layers.xavier_initializer()):
-        #     output_s, output_e = self.add_answer_module(output, q_vec, embeddings)
+            e_outputs, f_episode = self.generate_episode(
+                    prev_memory, q_vec, fact_vecs, 0)
+
+            e_outputs = tf.unstack(e_outputs, axis=1)
+
+            m_GRU = GRUCell(p.hidden_size)
+
+            # no of prediction
+            output_s, output_e = [], []
+            for hop in xrange(self.config.num_hops):
+                if hop < (self.config.num_hops - 1):
+                    is_iteration = True
+                else:
+                    is_iteration = False
+                with tf.variable_scope("start"):
+                    output_s = self.predict_position(m_GRU, prev_memory, e_outputs, is_iteration, bool(hop))
+                with tf.variable_scope("end"):
+                    output_e = self.predict_position(m_GRU, prev_memory, e_outputs, is_iteration, bool(hop))
+
 
         return (output_s, output_e)
 
@@ -294,7 +313,7 @@ class ModelSquad(Model):
 
         # shuffle data
         p = np.random.permutation(len(data[0]))
-      
+        pr = np.ones( config.batch_size)
         ct, ct_l, q, q_l, _, _, s, e = data
         ct, ct_l, q, q_l, s, e = np.asarray(ct, dtype=config.floatX), np.asarray(ct_l, dtype=config.floatX), \
                                         np.asarray(q, dtype=config.floatX), np.asarray(q_l, dtype=config.floatX), \
@@ -305,6 +324,7 @@ class ModelSquad(Model):
                           (step + 1) * config.batch_size)
             feed = {self.question_placeholder: q[index],
                     self.question_len_placeholder: q_l[index],
+                    self.pred_len_placeholder: pr,
                     self.input_placeholder: ct[index],
                     self.input_len_placeholder: ct_l[index],
                     self.start_placeholder: s[index],
