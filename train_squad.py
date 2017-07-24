@@ -53,7 +53,7 @@ def main(restore=False):
             start[data_len:], end[data_len:]
 
     config = Config()
-    config.strong_supervision = True
+    # config.strong_supervision = True
     model = ModelSquad(config)
 
     model.set_data(train, dev, word_embedding, np.shape(questions)[1], np.shape(contexts)[1], np.shape(answers)[1], len(word_embedding))

@@ -85,7 +85,7 @@ class ModelSquad(Model):
                                         reuse=reuse)
 
             attention = tf.layers.dense(attention,
-                                        1,
+                                        p.embed_size,
                                         activation=None,
                                         name="layer2",
                                         reuse=reuse)
@@ -98,25 +98,20 @@ class ModelSquad(Model):
         # from g generate h/e
         # squeeze is remove all dimension that has 1-d (1,2,3, 1,4) => (2,3)
         # get Gt from each input vector Ct
-        attentions = [tf.squeeze(
-            self.get_attention(q_vec, memory, fv, bool(hop_index) or bool(i)), axis=1)
-            for i, fv in enumerate(tf.unstack(fact_vecs, axis=1))]
+        attentions = [self.get_attention(q_vec, memory, fv, bool(hop_index) or bool(i))
+                        for i, fv in enumerate(tf.unstack(fact_vecs, axis=1))]
         # tf.stack(attentions) will be length x batch_size x dimension
         # transpose to batch_size x length x dimension
         attentions = tf.transpose(tf.stack(attentions))
         # self.attentions will mem_length x batch_size x length x dimension
-        self.attentions.append(attentions)
-        attentions = tf.nn.softmax(attentions)
-        attentions = tf.expand_dims(attentions, axis=-1)
 
         reuse = True if hop_index > 0 else False
-
+        
         # concatenate fact vectors and attentions for input into attGRU
-        gru_inputs = tf.concat([fact_vecs, attentions], 2)
         # GRU - RNN to generate final e
         with tf.variable_scope('attention_gru', reuse=reuse):
             outputs, episode = tf.nn.dynamic_rnn(AttentionGRUCell(p.hidden_size),
-                                           gru_inputs,
+                                           attentions,
                                            dtype=np.float32,
                                            sequence_length=self.input_len_placeholder
                                            )
