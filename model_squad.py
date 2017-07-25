@@ -102,15 +102,14 @@ class ModelSquad(Model):
                         for i, fv in enumerate(tf.unstack(fact_vecs, axis=1))]
         # tf.stack(attentions) will be length x batch_size x dimension
         # transpose to batch_size x length x dimension
-        attentions = tf.transpose(tf.stack(attentions))
-        # self.attentions will mem_length x batch_size x length x dimension
+        attentions = tf.transpose(tf.stack(attentions), perm=[1, 0, 2])
 
         reuse = True if hop_index > 0 else False
         
         # concatenate fact vectors and attentions for input into attGRU
         # GRU - RNN to generate final e
         with tf.variable_scope('attention_gru', reuse=reuse):
-            outputs, episode = tf.nn.dynamic_rnn(AttentionGRUCell(p.hidden_size),
+            outputs, episode = tf.nn.dynamic_rnn(GRUCell(p.hidden_size),
                                            attentions,
                                            dtype=np.float32,
                                            sequence_length=self.input_len_placeholder
