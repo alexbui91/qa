@@ -78,11 +78,11 @@ class ModelSquad(Model):
                         tf.abs(fact_vec - prev_memory)]
             # feature_vec with size b x 4d
             feature_vec = tf.concat(features, 1)
-            attention = tf.layers.dense(feature_vec,
-                                        p.embed_size,
-                                        activation=tf.nn.tanh,
-                                        name="layer1",
-                                        reuse=reuse)
+            # attention = tf.layers.dense(feature_vec,
+            #                             p.embed_size,
+            #                             activation=tf.nn.tanh,
+            #                             name="layer1",
+            #                             reuse=reuse)
 
             attention = tf.layers.dense(attention,
                                         p.embed_size,

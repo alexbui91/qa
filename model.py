@@ -192,7 +192,8 @@ class Model(object):
         
         # use encoding to get sentence representation plus position encoding
         # (like fb represent)
-        inputs = tf.reduce_sum(inputs * self.encoding, 2)
+        if hasattr(self, 'encoding'):
+            inputs = tf.reduce_sum(inputs * self.encoding, 2)
         
         forward_gru_cell = tf.contrib.rnn.GRUCell(p.hidden_size)
         backward_gru_cell = tf.contrib.rnn.GRUCell(p.hidden_size)

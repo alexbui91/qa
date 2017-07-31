@@ -57,7 +57,7 @@ def main(restore=False):
     model = ModelSquad(config)
 
     model.set_data(train, dev, word_embedding, np.shape(questions)[1], np.shape(contexts)[1], np.shape(answers)[1], len(word_embedding))
-    model.set_encoding()
+    # model.set_encoding()
     model.init_ops()
 
      # tf.reset_default_graph()
