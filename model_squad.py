@@ -84,7 +84,7 @@ class ModelSquad(Model):
             #                             name="layer1",
             #                             reuse=reuse)
 
-            attention = tf.layers.dense(attention,
+            attention = tf.layers.dense(feature_vec,
                                         p.embed_size,
                                         activation=None,
                                         name="layer2",
