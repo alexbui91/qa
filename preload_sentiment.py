@@ -69,7 +69,8 @@ folder = 'sentiment'
 if __name__ == "__main__":
     vocab_file = '%s/%s' % (folder, 'vocabs_fine_tuned.pkl')
     if not u.check_file(vocab_file):
-        preload_vocabs()
+        if not u.check_file('%s/vocabs_text.txt ' % folder):
+            preload_vocabs()
         vocabs = p.get_vocabs_from_text(folder)
         u.save_file(vocab_file, vocabs)
     else: 
