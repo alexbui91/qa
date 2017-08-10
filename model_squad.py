@@ -85,7 +85,7 @@ class ModelSquad(Model):
             #                             reuse=reuse)
 
             attention = tf.layers.dense(feature_vec,
-                                        p.embed_size,
+                                        p.hidden_size,
                                         activation=None,
                                         name="layer2",
                                         reuse=reuse)

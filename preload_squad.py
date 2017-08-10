@@ -234,7 +234,7 @@ def convert_vocab_to_text(vocabs):
 
 
 
-def get_vocabs_from_text():
+def get_vocabs_from_text(folder):
     vocabs_text = u.load_file_utf8('%s/%s' % (folder, 'vocabs_text.txt'))
     vocabs = dict()
     vocabs['<unk>'] = 0
@@ -253,7 +253,7 @@ if __name__ == "__main__":
     if u.check_file(ft_vc):
         vocabs = u.load_file(ft_vc)
     else:
-        vocabs = get_vocabs_from_text()
+        vocabs = get_vocabs_from_text(folder)
         u.save_file(ft_vc, vocabs)
     contexts, contexts_len, questions, questions_len, answers, answers_len, start, end = make_idx(vocabs, 'train-v1.1.json')
     contexts_d, contexts_len_d, questions_d, questions_len_d, answers_d, answers_len_d, start_d, end_d = make_idx(vocabs, 'dev-v1.1.json', False)
