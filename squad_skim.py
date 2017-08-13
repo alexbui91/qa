@@ -288,7 +288,7 @@ class SquadSkim(Model):
                     self.start_placeholder: st[index],
                     self.end_placeholder: ed[index],
                     self.pred_len_placeholder: np.ones(config.batch_size),
-                    self.input_scan_len_placeholder: np.full(p.max_scanning),
+                    self.input_scan_len_placeholder: np.full(config.batch_size, p.max_scanning),
                     self.dropout_placeholder: dp}
             
             start = st[step * config.batch_size:(step + 1) * config.batch_size]
