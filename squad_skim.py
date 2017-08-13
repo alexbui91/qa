@@ -79,6 +79,7 @@ class SquadSkim(Model):
 
         # get answer position to scan
         with tf.variable_scope("first_look_up", initializer=tf.contrib.layers.xavier_initializer()):
+            print('==> predict start position')
             look_up_vector = tf.concat([word_reps, question_reps], 1)
             look_up_pos = tf.layers.dense(look_up_vector,
                                         p.embed_size,
@@ -94,15 +95,19 @@ class SquadSkim(Model):
             # will be b x l x d
             # dig deep in question
         with tf.variable_scope("question_full_rep", initializer=tf.contrib.layers.xavier_initializer()):
+            print('==> deeply dig question meaning')
             questions, _ = self.get_question_representation(embeddings)
 
         with tf.variable_scope("input_full_rep", initializer=tf.contrib.layers.xavier_initializer()):
+            print('==> get representation on span of text')
             input_vectors = self.get_input_representation(embeddings, tf.concat(input_v, 0))
         
         with tf.variable_scope("attention", initializer=tf.contrib.layers.xavier_initializer()):
+            print('==> get attention with sum up pooling question')
             attention = self.get_attention_map(input_vectors, questions)
 
         with tf.variable_scope("pred", initializer=tf.contrib.layers.xavier_initializer()):
+            print('==> final prediction')
             cell = GRUCell(p.embed_size)
             start_p, state = self.scan_answer(cell, attention)
             end_p, _ = self.scan_answer(cell, attention, state, True)
