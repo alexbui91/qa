@@ -47,9 +47,13 @@ class SquadSkim(Model):
             self.config.batch_size, self.max_input_len))  
         self.question_placeholder = tf.placeholder(tf.int32, shape=(
             self.config.batch_size, self.max_question_len))  
-
+        # for quick skim
         self.input_len_placeholder = tf.placeholder(
             tf.int32, shape=(self.config.batch_size,))
+        # for full scan
+        self.input_scan_len_placeholder = tf.placeholder(
+            tf.int32, shape=(self.config.batch_size,))
+
         self.question_len_placeholder = tf.placeholder(
             tf.int32, shape=(self.config.batch_size,))
         
@@ -127,7 +131,7 @@ class SquadSkim(Model):
             cell,
             inputs,
             dtype=np.float32,
-            sequence_length=self.input_len_placeholder
+            sequence_length=self.input_scan_len_placeholder
         )
 
         # f<-> = f-> + f<-
