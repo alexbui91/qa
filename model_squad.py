@@ -2,20 +2,11 @@ from __future__ import print_function
 from __future__ import division
 
 import sys
-import time
 
 import numpy as np
-from copy import deepcopy
 
 import tensorflow as tf
-from attention_gru_cell import AttentionGRUCell
 from tensorflow.contrib.rnn import GRUCell
-
-
-from tensorflow.contrib.cudnn_rnn.python.ops import cudnn_rnn_ops
-
-import preload
-from softmax_cell import SMGRUCell
 
 import properties as p
 
@@ -180,7 +171,7 @@ class ModelSquad(Model):
         # input fusion module
         with tf.variable_scope("question", initializer=tf.contrib.layers.xavier_initializer()):
             print('==> get question representation')
-            q_vec = self.get_question_representation(embeddings)
+            _, q_vec = self.get_question_representation(embeddings)
 
         with tf.variable_scope("input", initializer=tf.contrib.layers.xavier_initializer()):
             print('==> get input representation')

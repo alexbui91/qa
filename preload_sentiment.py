@@ -60,8 +60,8 @@ def load_file(vocabs, name):
 
 def preload_vocabs():
     vocabs = dict()
-    load_file(vocabs, '/home/alex/Documents/nlp/code/data/training_twitter_full.txt')
-    load_file(vocabs, '/home/alex/Documents/nlp/code/data/test_twitter.txt')
+    load_file(vocabs, '/home/alex/Documents/nlp/code/data/training_twitter_full_.txt')
+    load_file(vocabs, '/home/alex/Documents/nlp/code/data/test_twitter_.txt')
     u.save_file_utf8('%s/%s' % (folder, 'vocabs_text.txt'), p.convert_vocab_to_text(vocabs))
 
 folder = 'sentiment'

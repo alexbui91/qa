@@ -8,6 +8,8 @@ import numpy as np
 from copy import deepcopy
 
 import tensorflow as tf
+
+from tensorflow.contrib.rnn import GRUCell
 from attention_gru_cell import AttentionGRUCell
 
 from tensorflow.contrib.cudnn_rnn.python.ops import cudnn_rnn_ops
@@ -176,14 +178,14 @@ class Model(object):
         """Get question vectors via embedding and GRU"""
         questions = tf.nn.embedding_lookup(
             embeddings, self.question_placeholder)
-        gru_cell = tf.contrib.rnn.GRUCell(p.hidden_size)
-        _, q_vec = tf.nn.dynamic_rnn(gru_cell,
+        gru_cell = GRUCell(p.embed_size)
+        outputs, q_vec = tf.nn.dynamic_rnn(gru_cell,
                                      questions,
                                      dtype=np.float32,
                                      sequence_length=self.question_len_placeholder
                                      )
         # output with b x d
-        return q_vec
+        return outputs, q_vec
 
     def get_input_representation(self, embeddings):
         """Get fact (sentence) vectors via embedding, positional encoding and bi-directional GRU"""
@@ -337,7 +339,7 @@ class Model(object):
         # input fusion module
         with tf.variable_scope("question", initializer=tf.contrib.layers.xavier_initializer()):
             print('==> get question representation')
-            q_vec = self.get_question_representation(embeddings)
+            _, q_vec = self.get_question_representation(embeddings)
 
         with tf.variable_scope("input", initializer=tf.contrib.layers.xavier_initializer()):
             print('==> get input representation')

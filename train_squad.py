@@ -7,7 +7,7 @@ import time
 import argparse
 
 from model import Config
-from model_squad import ModelSquad
+from squad_skim import SquadSkim
 
 import properties as p
 import preload as pr
@@ -46,17 +46,15 @@ def main(restore=False):
     data_len = int(np.floor(0.9 * len(contexts))) 
     
     train = contexts[:data_len], contexts_len[:data_len], questions[:data_len], \
-            questions_len[:data_len], answers[:data_len], answers_len[:data_len], \
-            start[:data_len], end[:data_len]
+            questions_len[:data_len], start[:data_len], end[:data_len]
     dev = contexts[data_len:], contexts_len[data_len:], questions[data_len:], \
-            questions_len[data_len:], answers[data_len:], answers_len[data_len:], \
-            start[data_len:], end[data_len:]
+            questions_len[data_len:], start[data_len:], end[data_len:]
 
     config = Config()
     # config.strong_supervision = True
-    model = ModelSquad(config)
+    model = SquadSkim(config)
 
-    model.set_data(train, dev, word_embedding, np.shape(questions)[1], np.shape(contexts)[1], np.shape(answers)[1], len(word_embedding))
+    model.set_data(train, dev, word_embedding, np.shape(contexts)[1], np.shape(questions)[1])
     # model.set_encoding()
     model.init_ops()
 

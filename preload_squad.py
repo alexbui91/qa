@@ -2,6 +2,7 @@ import json
 import utils as u
 from nltk.tokenize import RegexpTokenizer
 import numpy as np
+import properties as p
 # from pprint import pprint
 
 
@@ -55,13 +56,18 @@ def make_idx(vocabs, name, train_mode=True):
                             "context": para_idx,
                             "answers": answers_idx,
                             'rel': rel_idx,
-                            "question": quest_idx
+                            "question": quest_idx,
+                            "id" : qa['id']
                         })
                 # paras_idx.append({
                 #     'context': para_idx,
                 #     'qas': qa_idx
                 # })
             # doc_idx.append(paras_idx)
+        max_input_len = get_length_fixation(max_input_len)
+        max_q_len = get_length_fixation(max_q_len)
+        max_ans_len = get_length_fixation(max_ans_len)
+
     return pad_data(doc_idx, (max_input_len, max_q_len, max_ans_len), train_mode)
 
 
@@ -109,6 +115,11 @@ def get_idx(vocabs, sent):
             sent_idx.append(0)
     return sent_idx
 
+
+def get_length_fixation(length):
+    if length % p.fixation != 0:
+        length = (length / p.fixation + 1) * p.fixation
+    return length
 
 def pad_data(data, lens, train_mode=True):
     max_input_len, max_q_len, max_a_len = lens
