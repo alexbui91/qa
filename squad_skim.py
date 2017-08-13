@@ -277,7 +277,7 @@ class SquadSkim(Model):
         ct, ct_l, q, ql, st, ed = np.asarray(ct, dtype=config.floatX), np.asarray(ct_l, dtype=config.floatX),  \
                                 np.asarray(q, dtype=config.floatX), np.asarray(ql, dtype=config.floatX), \
                                 np.asarray(st, dtype=config.floatX), np.asarray(ed, dtype=config.floatX)
-        ct, ct_l, q, ql, st, ed = ct[r], ct_l[r], q[r], ql[r], pr[r], st[r], ed[r]
+        ct, ct_l, q, ql, st, ed = ct[r], ct_l[r], q[r], ql[r], st[r], ed[r]
         for step in range(total_steps):
             index = range(step * config.batch_size,
                           (step + 1) * config.batch_size)
