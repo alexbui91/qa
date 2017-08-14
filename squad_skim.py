@@ -310,14 +310,13 @@ class SquadSkim(Model):
                     self.input_scan_len_placeholder: np.full(config.batch_size, p.max_scanning),
                     self.dropout_placeholder: dp}
             
-            start = st[step * config.batch_size:(step + 1) * config.batch_size] - self.start_offset
-            end = ed[step * config.batch_size:(step + 1) * config.batch_size] - self.start_offset
+            start = st[step * config.batch_size:(step + 1) * config.batch_size]
+            end = ed[step * config.batch_size:(step + 1) * config.batch_size]
             # if config.strong_supervision:
             #     feed[self.rel_label_placeholder] = r[index]
 
-            loss, pred_s, pred_e, start_offset, summary, _ = session.run(
-                [self.calculate_loss, self.pred_s, self.pred_e, self.start_offset, self.merged, train_op], feed_dict=feed)
-            print('start_offset', start_offset)
+            loss, pred_s, pred_e, summary, _ = session.run(
+                [self.calculate_loss, self.pred_s, self.pred_e, self.merged, train_op], feed_dict=feed)
             print('pred_s', pred_s)
             print('start', start)
             if train_writer is not None:
