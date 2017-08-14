@@ -319,14 +319,16 @@ class SquadSkim(Model):
             # if config.strong_supervision:
             #     feed[self.rel_label_placeholder] = r[index]
 
-            loss, pred_s, pred_e, sp, ep, summary, _ = session.run(
+            loss, pred_s, pred_e, sp, st_l, ep, ep_l, summary, _ = session.run(
                 [self.calculate_loss, self.pred_s, self.pred_e, self.start, self.st_label, self.end, self.ed_label, self.merged, train_op], feed_dict=feed)
             if train_writer is not None:
                 train_writer.add_summary(
                     summary, num_epoch * total_steps + step)
             
-            print('start', sp)
+            print('start', st)
             print('end', ep)
+            print('start_l', st_l)
+            print('end_l', ep_l)
             accuracy += (np.sum(pred_s == start) + np.sum(pred_e == end)) / float(len(start) + len(end))
            
             total_loss.append(loss)
