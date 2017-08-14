@@ -85,6 +85,7 @@ class SquadSkim(Model):
         with tf.variable_scope("first_look_up", initializer=tf.contrib.layers.xavier_initializer()):
             print('==> predict start position')
             look_up_vector = tf.concat([word_reps, question_reps], 1)
+            look_up_vector = tf.nn.dropout(look_up_vector, self.dropout_placeholder, name="start_point_do")
             look_up_pos = tf.layers.dense(look_up_vector,
                                         p.embed_size,
                                         activation=tf.nn.tanh,
@@ -157,6 +158,7 @@ class SquadSkim(Model):
             sequence_length=pl
         )
         outputs = tf.transpose(outputs, perm=[0, 2, 1])
+        outputs = tf.nn.dropout(outputs, self.dropout_placeholder, name="quick_skim_dense_do")
         outputs = tf.layers.dense(outputs, 1,
                                 activation=tf.nn.tanh,
                                 name='quick_skim_dense',
@@ -210,6 +212,7 @@ class SquadSkim(Model):
         s_ = tf.transpose(tf.stack(tmp), perm=[1,0,2])
 
         # B x L x D
+        s_ = tf.nn.dropout(s_, self.dropout_placeholder, name="attention_question_do")
         s_ = tf.layers.dense(s_,
                             p.embed_size,
                             activation=tf.nn.tanh,
@@ -302,7 +305,8 @@ class SquadSkim(Model):
 
             loss, pred_s, pred_e, summary, _ = session.run(
                 [self.calculate_loss, self.pred_s, self.pred_e, self.merged, train_op], feed_dict=feed)
-
+            print('pred_s', pred_s)
+            print('pred_e', pred_e)
             if train_writer is not None:
                 train_writer.add_summary(
                     summary, num_epoch * total_steps + step)
