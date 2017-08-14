@@ -41,7 +41,7 @@ def main(restore=False):
         print("==> Done vectors ")
    
     # init word embedding
-    contexts, contexts_len, questions, questions_len, answers, answers_len, start, end = utils.load_file('squad/doc_train_idx.pkl')
+    contexts, contexts_len, questions, questions_len, answers, answers_len, start, end = utils.load_file('squad/doc_train_idx%s.pkl' % p.doc_suffix)
 
     data_len = int(np.floor(0.9 * len(contexts))) 
     
