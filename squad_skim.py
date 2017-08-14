@@ -258,7 +258,7 @@ class SquadSkim(Model):
 
     def get_max_boundary(self, input_vector):
         max_no = tf.reduce_max(input_vector)
-        max_bound = tf.fill(self.config.batch_size, max_no)
+        max_bound = tf.fill([self.config.batch_size], max_no)
         cond = input_vector < max_no
         return tf.where(cond, input_vector, max_no)
 
