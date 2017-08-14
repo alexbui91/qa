@@ -29,7 +29,8 @@ class SquadSkim(Model):
             self.add_placeholders()
             # init model
             start_offset, st, ed = self.inference()
-            self.start_offset = start_offset
+            self.start = st
+            self.end = ed
             # init prediction step
             self.pred_s = tf.add(start_offset, self.get_predictions(st))
             self.pred_e = tf.add(start_offset, self.get_predictions(ed))
@@ -315,14 +316,14 @@ class SquadSkim(Model):
             # if config.strong_supervision:
             #     feed[self.rel_label_placeholder] = r[index]
 
-            loss, pred_s, pred_e, summary, _ = session.run(
-                [self.calculate_loss, self.pred_s, self.pred_e, self.merged, train_op], feed_dict=feed)
-            print('pred_s', pred_s)
-            print('start', start)
+            loss, pred_s, pred_e, sp, ep, summary, _ = session.run(
+                [self.calculate_loss, self.pred_s, self.pred_e, self.start, self.end, self.merged, train_op], feed_dict=feed)
             if train_writer is not None:
                 train_writer.add_summary(
                     summary, num_epoch * total_steps + step)
             
+            print('start', sp)
+            print('end', ep)
             accuracy += (np.sum(pred_s == start) + np.sum(pred_e == end)) / float(len(start) + len(end))
            
             total_loss.append(loss)
