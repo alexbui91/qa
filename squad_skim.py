@@ -239,8 +239,9 @@ class SquadSkim(Model):
     def add_loss_op(self, output_s, output_e):
         """Calculate loss"""
         so = tf.cast(self.start_offset, tf.int32)
-        st_label = tf.subtract(self.start_placeholder, so)
-        ed_label = tf.subtract(self.end_placeholder, so)
+        # get label of start and end inside boundary
+        st_label = self.get_max_boundary(self.get_low_boundary(tf.subtract(self.start_placeholder, so)))
+        ed_label = self.get_max_boundaryself.get_low_boundary(tf.subtract(self.end_placeholder, so)))
         loss = (tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(
             logits=output_s, labels=st_label)) + \
             tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -255,6 +256,16 @@ class SquadSkim(Model):
 
         return loss
 
+    def get_max_boundary(self, input_vector):
+        max_no = tf.reduce_max(input_vector)
+        max_bound = tf.fill(self.config.batch_size, max_no)
+        cond = input_vector < max_no
+        return tf.where(cond, input_vector, max_no)
+
+    def get_low_boundary(self, input_vector):
+        zeros = tf.zeros_like(input_vector)
+        cond = input_vector < zeros
+        return tf.where(cond, zeros, input_vector)
 
     def add_training_op(self, loss):
         """Calculate and apply gradients"""
@@ -299,8 +310,8 @@ class SquadSkim(Model):
                     self.input_scan_len_placeholder: np.full(config.batch_size, p.max_scanning),
                     self.dropout_placeholder: dp}
             
-            start = st[step * config.batch_size:(step + 1) * config.batch_size]
-            end = ed[step * config.batch_size:(step + 1) * config.batch_size]
+            start = st[step * config.batch_size:(step + 1) * config.batch_size] - self.start_offset
+            end = ed[step * config.batch_size:(step + 1) * config.batch_size] - self.start_offset
             # if config.strong_supervision:
             #     feed[self.rel_label_placeholder] = r[index]
 
