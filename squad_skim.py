@@ -29,6 +29,7 @@ class SquadSkim(Model):
             self.add_placeholders()
             # init model
             start_offset, st, ed = self.inference()
+            self.start_offset = start_offset
             self.start = self.get_predictions(st)
             self.end =  self.get_predictions(ed)
             # init prediction step
