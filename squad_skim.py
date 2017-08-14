@@ -241,7 +241,7 @@ class SquadSkim(Model):
         so = tf.cast(self.start_offset, tf.int32)
         # get label of start and end inside boundary
         st_label = self.get_max_boundary(self.get_low_boundary(tf.subtract(self.start_placeholder, so)))
-        ed_label = self.get_max_boundaryself.get_low_boundary(tf.subtract(self.end_placeholder, so)))
+        ed_label = self.get_max_boundary(self.get_low_boundary(tf.subtract(self.end_placeholder, so)))
         loss = (tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(
             logits=output_s, labels=st_label)) + \
             tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(
