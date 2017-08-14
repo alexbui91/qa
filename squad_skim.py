@@ -29,11 +29,11 @@ class SquadSkim(Model):
             self.add_placeholders()
             # init model
             start_offset, st, ed = self.inference()
-            self.start = st
-            self.end = ed
+            self.start = self.get_predictions(st)
+            self.end =  self.get_predictions(ed)
             # init prediction step
-            self.pred_s = tf.add(start_offset, self.get_predictions(st))
-            self.pred_e = tf.add(start_offset, self.get_predictions(ed))
+            self.pred_s = tf.add(start_offset, self.start)
+            self.pred_e = tf.add(start_offset, self.end)
             # init cost function
             self.calculate_loss = self.add_loss_op(st, ed)
             # init gradient
@@ -243,6 +243,8 @@ class SquadSkim(Model):
         # get label of start and end inside boundary
         st_label = self.get_max_boundary(self.get_low_boundary(tf.subtract(self.start_placeholder, so)))
         ed_label = self.get_max_boundary(self.get_low_boundary(tf.subtract(self.end_placeholder, so)))
+        self.st_label = st_label
+        self.ed_label = ed_label
         loss = (tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(
             logits=output_s, labels=st_label)) + \
             tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -317,7 +319,7 @@ class SquadSkim(Model):
             #     feed[self.rel_label_placeholder] = r[index]
 
             loss, pred_s, pred_e, sp, ep, summary, _ = session.run(
-                [self.calculate_loss, self.pred_s, self.pred_e, self.start, self.end, self.merged, train_op], feed_dict=feed)
+                [self.calculate_loss, self.pred_s, self.pred_e, self.start, self.st_label, self.end, self.ed_label, self.merged, train_op], feed_dict=feed)
             if train_writer is not None:
                 train_writer.add_summary(
                     summary, num_epoch * total_steps + step)
