@@ -222,7 +222,7 @@ class SquadSkim(Model):
                             name="attention_question_softmax", 
                             reuse=reuse)
         # To B x L
-        a_ = tf.nn.softmax(tf.squeeze(s_))
+        a_ = tf.squeeze(s_)
         tmp = list()
 
         for c_, a_v in zip(context_, tf.unstack(a_, axis=1)):

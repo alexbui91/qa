@@ -3,6 +3,8 @@ import utils as u
 from nltk.tokenize import RegexpTokenizer
 import numpy as np
 import properties as p
+
+import argparse
 # from pprint import pprint
 
 
@@ -14,23 +16,30 @@ def get_structure():
         print(context[0]['paragraphs'][0]['qas'][2]['answers'])
 
 
-def make_idx(vocabs, name, train_mode=True):
+def make_idx(vocabs, name, train_mode=True, limit=None):
     with open('%s/%s' % (folder, name)) as data_file:    
         max_input_len = max_q_len = max_ans_len = 0
         data = json.load(data_file)
         context = data['data']
         doc_idx = list()
+        index = 0
         for pas in context:
+            if not limit is None and index >= limit:
+                break
             #one context has many paragraphs
             paragraphs = pas['paragraphs']
             # paras_idx = list()
             for para in paragraphs:
+                if not limit is None and index >= limit:
+                    break
                 para_idx = get_idx(vocabs, para['context'])
                 if max_input_len < len(para_idx):
                     max_input_len = len(para_idx)
                 qas = para['qas']
                 # qa_idx = list()
                 for qa in qas:
+                    if not limit is None and index >= limit:
+                        break
                     #each paragraph has many questions and answers
                     quest_idx = get_idx(vocabs, qa['question'])
                     if max_q_len < len(quest_idx):
@@ -59,6 +68,7 @@ def make_idx(vocabs, name, train_mode=True):
                             "question": quest_idx,
                             "id" : qa['id']
                         })
+                        index += 1
                 # paras_idx.append({
                 #     'context': para_idx,
                 #     'qas': qa_idx
@@ -258,6 +268,12 @@ def get_vocabs_from_text(folder):
 
 folder = 'squad'
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-l", "--limit", type=int,
+                        help="Maximum questions load")
+    
+    args = parser.parse_args()
+    
     # preload_vocabs()
     vocabs = dict()
     ft_vc = '%s/%s' % (folder, 'vocabs_fine_tuned.pkl')
@@ -266,8 +282,8 @@ if __name__ == "__main__":
     else:
         vocabs = get_vocabs_from_text(folder)
         u.save_file(ft_vc, vocabs)
-    contexts, contexts_len, questions, questions_len, answers, answers_len, start, end = make_idx(vocabs, 'train-v1.1.json')
-    contexts_d, contexts_len_d, questions_d, questions_len_d, answers_d, answers_len_d, start_d, end_d = make_idx(vocabs, 'dev-v1.1.json', False)
+    contexts, contexts_len, questions, questions_len, answers, answers_len, start, end = make_idx(vocabs, 'train-v1.1.json', limit=args.limit)
+    contexts_d, contexts_len_d, questions_d, questions_len_d, answers_d, answers_len_d, start_d, end_d = make_idx(vocabs, 'dev-v1.1.json', False, limit=args.limit)
     u.save_file('%s/%s' % (folder, 'doc_train_idx.pkl'), (contexts, contexts_len, questions, questions_len, answers, answers_len, start, end))
     u.save_file('%s/%s' % (folder, 'doc_dev_idx.pkl'), (contexts_d, contexts_len_d, questions_d, questions_len_d, answers_d, answers_len_d, start_d, end_d ))
     # v_txt = convert_vocab_to_text(vocabs)
