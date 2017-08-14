@@ -242,7 +242,6 @@ class SquadSkim(Model):
         # get label of start and end inside boundary
         st_label = self.get_max_boundary(self.get_low_boundary(tf.subtract(self.start_placeholder, so)))
         ed_label = self.get_max_boundary(self.get_low_boundary(tf.subtract(self.end_placeholder, so)))
-        self.st_label = st_label
         loss = (tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(
             logits=output_s, labels=st_label)) + \
             tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -258,7 +257,7 @@ class SquadSkim(Model):
         return loss
 
     def get_max_boundary(self, input_vector):
-        max_no = p.max_scanning
+        max_no = p.max_scanning - 1
         max_bound = tf.fill([self.config.batch_size], max_no)
         cond = input_vector < max_no
         return tf.where(cond, input_vector, max_bound)
@@ -316,13 +315,12 @@ class SquadSkim(Model):
             # if config.strong_supervision:
             #     feed[self.rel_label_placeholder] = r[index]
 
-            loss, pred_s, pred_e, st_l, summary, _ = session.run(
-                [self.calculate_loss, self.pred_s, self.pred_e, self.st_label, self.merged, train_op], feed_dict=feed)
+            loss, pred_s, pred_e, summary, _ = session.run(
+                [self.calculate_loss, self.pred_s, self.pred_e, self.merged, train_op], feed_dict=feed)
             if train_writer is not None:
                 train_writer.add_summary(
                     summary, num_epoch * total_steps + step)
             
-            print('start_l', st_l)
             accuracy += (np.sum(pred_s == start) + np.sum(pred_e == end)) / float(len(start) + len(end))
            
             total_loss.append(loss)
