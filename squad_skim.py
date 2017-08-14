@@ -69,6 +69,7 @@ class SquadSkim(Model):
         self.dropout_placeholder = tf.placeholder(tf.float32)
 
     def inference(self):
+        epsilon = tf.constant(1e-10, dtype=tf.float32)
         """Performs inference on the DMN model"""
         embeddings = tf.Variable(
             self.word_embedding.astype(np.float32), name="Embedding")
@@ -117,7 +118,7 @@ class SquadSkim(Model):
             start_p, state = self.scan_answer(cell, attention)
             end_p, _ = self.scan_answer(cell, attention, state, True)
 
-        return start_offset, start_p, end_p
+        return start_offset, tf.add(start_p, epsilon),  tf.add(end_p, epsilon)
 
     def get_input_representation(self, embeddings, input_vectors):
         """Get fact (sentence) vectors via embedding, positional encoding and bi-directional GRU"""
@@ -306,7 +307,7 @@ class SquadSkim(Model):
             loss, pred_s, pred_e, summary, _ = session.run(
                 [self.calculate_loss, self.pred_s, self.pred_e, self.merged, train_op], feed_dict=feed)
             print('pred_s', pred_s)
-            print('pred_e', pred_e)
+            print('start', start)
             if train_writer is not None:
                 train_writer.add_summary(
                     summary, num_epoch * total_steps + step)
