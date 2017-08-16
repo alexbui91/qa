@@ -11,7 +11,7 @@ from tensorflow.contrib.rnn import GRUCell
 
 import properties as p
 
-from pointer_cell import PointerCell
+from pointer_cell import PointerCell, GateAttentionBase
 from model import Config, Model
 
 
@@ -82,7 +82,7 @@ class SquadSkim(Model):
         # mix question information to each word in paragraph
         with tf.variable_scope("input_question_attention", initializer=tf.contrib.layers.xavier_initializer()):
             print('==> get input question attention')
-            iqa_cell = PointerCell(p.embed_size, contexts=question_reps)
+            iqa_cell = GateAttentionBase(p.embed_size, contexts=question_reps)
             attention, _ = tf.nn.dynamic_rnn(iqa_cell,
                                 word_reps,
                                 dtype=np.float32,

@@ -46,7 +46,7 @@ class PointerCell(RNNCell):
 
     def call(self, inputs=None, state=None):
         """Gated recurrent unit (GRU) with nunits cells."""
-        with vs.variable_scope("gates"):  # Reset gate and update gate.
+        with vs.variable_scope("gate_pointer_cell"):  # Reset gate and update gate.
             a_, c_ = self.get_max_pooling(self.contexts, inputs, state)
             if self.concat_context:
                 inputs = tf.concat([inputs, c_])
@@ -72,41 +72,73 @@ class PointerCell(RNNCell):
         return outputs, new_h
 
     def get_max_pooling(self, context, time_step_vector=None, prev_=None):
-            """ sum over context to single vectzor"""
-            context_ = tf.unstack(context, axis=1)
-            if not time_step_vector is None or not prev_ is None:
-                tmp = list()
-                for c_ in context_:
-                    input_vector = list()
-                    input_vector.append(c_)
-                    if not time_step_vector is None:
-                        input_vector.append(time_step_vector)
-                    if not prev_ is None:
-                        input_vector.append(prev_)
-                    tmp.append(tf.concat(input_vector, axis=1))
-                # B x L x D
-                s_ = tf.transpose(tf.stack(tmp), perm=[1,0,2])
-            else:
-                s_ = context
-            # B x L x D
-            s_ = tf.layers.dense(s_,
-                                self._num_units,
-                                activation=tf.nn.tanh,
-                                name="attention_question",
-                                reuse=self.reuse)
-            # To B x L x 1
-            s_ = tf.layers.dense(s_,
-                                1,
-                                activation=None,
-                                name="attention_question_softmax",
-                                reuse=self.reuse)
-            # To B x L
-            a_ = tf.squeeze(s_)
+        """ sum over context to single vectzor"""
+        context_ = tf.unstack(context, axis=1)
+        if not time_step_vector is None or not prev_ is None:
             tmp = list()
+            for c_ in context_:
+                input_vector = list()
+                input_vector.append(c_)
+                if not time_step_vector is None:
+                    input_vector.append(time_step_vector)
+                if not prev_ is None:
+                    input_vector.append(prev_)
+                tmp.append(tf.concat(input_vector, axis=1))
+            # B x L x D
+            s_ = tf.transpose(tf.stack(tmp), perm=[1,0,2])
+        else:
+            s_ = context
+        # B x L x D
+        s_ = tf.layers.dense(s_,
+                            self._num_units,
+                            activation=tf.nn.tanh,
+                            name="attention_question",
+                            reuse=self.reuse)
+        # To B x L x 1
+        s_ = tf.layers.dense(s_,
+                            1,
+                            activation=None,
+                            name="attention_question_softmax",
+                            reuse=self.reuse)
+        # To B x L
+        a_ = tf.squeeze(s_)
+        tmp = list()
 
-            for c_, a_v in zip(context_, tf.unstack(a_, axis=1)):
-                tmp.append(tf.stack([e_c * e_a for e_c, e_a in zip(tf.unstack(c_), tf.unstack(a_v))]))
-            u_ = tf.stack(tmp)
-            # return prediction and agg vector
-            # expect a_: BxL, agg: BxD
-            return a_, tf.reduce_sum(u_, 0)
+        for c_, a_v in zip(context_, tf.unstack(a_, axis=1)):
+            tmp.append(tf.stack([e_c * e_a for e_c, e_a in zip(tf.unstack(c_), tf.unstack(a_v))]))
+        u_ = tf.stack(tmp)
+        # return prediction and agg vector
+        # expect a_: BxL, agg: BxD
+        return a_, tf.reduce_sum(u_, 0)
+
+class GateAttentionBase(PointerCell):
+    
+    def call(self, inputs=None, state=None):
+        """Gated recurrent unit (GRU) with nunits cells."""
+        a_, c_ = self.get_max_pooling(self.contexts, inputs, state)
+        with vs.variable_scope("sigmoid_gate"): 
+            if self.concat_context:
+                inputs = tf.concat([inputs, c_])
+                g_ = tf.nn.sigmoid(_linear([inputs], self._num_units * 2, False))
+            else:
+                inputs = c_
+                g_ = tf.nn.sigmoid(_linear([inputs], self._num_units, False))
+        inputs = tf.multiply(inputs, g_)
+        # We start with bias of 1.0 to not reset and not update.
+        bias_ones = self._bias_initializer
+        if self._bias_initializer is None:
+            dtype = [a.dtype for a in [inputs, state]][0]
+            bias_ones = init_ops.constant_initializer(1.0, dtype=dtype)
+        value = math_ops.sigmoid(
+            _linear([inputs, state], 2 * self._num_units, True, bias_ones, self._kernel_initializer))
+        r, u = array_ops.split(value=value, num_or_size_splits=2, axis=1)
+        with vs.variable_scope("candidate"):
+            c = self._activation(
+                _linear([inputs, r * state], self._num_units, True,
+                    self._bias_initializer, self._kernel_initializer))
+        new_h = u * state + (1 - u) * c
+        if self.result_type is 'pred':
+            outputs = a_
+        else:
+            outputs = new_h
+        return outputs, new_h
