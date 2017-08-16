@@ -11,6 +11,7 @@ from tensorflow.contrib.rnn import GRUCell
 
 import properties as p
 
+from pointer_cell import PointerCell
 from model import Config, Model
 
 
@@ -28,11 +29,10 @@ class SquadSkim(Model):
             # init memory
             self.add_placeholders()
             # init model
-            start_offset, st, ed = self.inference()
-            self.start_offset = start_offset
+            st, ed = self.inference()
             # init prediction step
-            self.pred_s = tf.add(start_offset, self.get_predictions(st))
-            self.pred_e = tf.add(start_offset, self.get_predictions(ed))
+            self.pred_s = self.get_predictions(st)
+            self.pred_e = self.get_predictions(ed)
             # init cost function
             self.calculate_loss = self.add_loss_op(st, ed)
             # init gradient
@@ -51,9 +51,6 @@ class SquadSkim(Model):
         self.input_len_placeholder = tf.placeholder(
             tf.int32, shape=(self.config.batch_size,))
         # for full scan
-        self.input_scan_len_placeholder = tf.placeholder(
-            tf.int32, shape=(self.config.batch_size,))
-
         self.question_len_placeholder = tf.placeholder(
             tf.int32, shape=(self.config.batch_size,))
         
@@ -75,177 +72,76 @@ class SquadSkim(Model):
             self.word_embedding.astype(np.float32), name="Embedding")
        
         with tf.variable_scope("input", initializer=tf.contrib.layers.xavier_initializer()):
-            print('==> skim paragraph')
-            word_reps = self.quick_skim_representation(embeddings, self.input_placeholder, self.max_input_len, self.input_len_placeholder)
+            print('==> encode paragraph')
+            word_reps = self.get_input_representation(embeddings, self.input_placeholder, self.input_len_placeholder)
 
         with tf.variable_scope("question", initializer=tf.contrib.layers.xavier_initializer()):
-            print('==> skim question')
-            question_reps = self.quick_skim_representation(embeddings, self.question_placeholder, self.max_question_len, self.question_len_placeholder)
+            print('==> encode question')
+            question_reps = self.get_input_representation(embeddings, self.question_placeholder, self.question_len_placeholder)
 
-        # get answer position to scan
-        with tf.variable_scope("first_look_up", initializer=tf.contrib.layers.xavier_initializer()):
-            print('==> predict start position')
-            look_up_vector = tf.concat([word_reps, question_reps], 1)
-            look_up_vector = tf.nn.dropout(look_up_vector, self.dropout_placeholder, name="start_point_do")
-            look_up_pos = tf.layers.dense(look_up_vector,
-                                        p.embed_size,
-                                        activation=tf.nn.tanh,
-                                        name="start_point")
-            start_offset = self.get_predictions(look_up_pos)
-            input_v = list()
-            
-            for para, s_ in zip(tf.unstack(self.input_placeholder), tf.unstack(start_offset)):
-                a = tf.expand_dims(tf.gather(para, tf.range(s_, s_ + p.max_scanning)), 0)
-                input_v.append(tf.reshape(a, [1, p.max_scanning]))
-            
-            # will be b x l x d
-            # dig deep in question
-        with tf.variable_scope("question_full_rep", initializer=tf.contrib.layers.xavier_initializer()):
-            print('==> deeply dig question meaning')
-            questions, _ = self.get_question_representation(embeddings)
-
-        with tf.variable_scope("input_full_rep", initializer=tf.contrib.layers.xavier_initializer()):
-            print('==> get representation on span of text')
-            input_vectors = self.get_input_representation(embeddings, tf.concat(input_v, 0))
+        # mix question information to each word in paragraph
+        with tf.variable_scope("input_question_attention", initializer=tf.contrib.layers.xavier_initializer()):
+            print('==> get input question attention')
+            iqa_cell = PointerCell(p.embed_size, contexts=question_reps)
+            attention, _ = tf.nn.dynamic_rnn(iqa_cell,
+                                word_reps,
+                                dtype=np.float32,
+                                sequence_length=self.input_len_placeholder
+                                )
         
-        with tf.variable_scope("attention", initializer=tf.contrib.layers.xavier_initializer()):
-            print('==> get attention with sum up pooling question')
-            attention = self.get_attention_map(input_vectors, questions)
+        with tf.variable_scope("self_matching_attention", initializer=tf.contrib.layers.xavier_initializer()):
+            print('==> get self paragraph attention')
+            sma_cell = PointerCell(p.embed_size, contexts=attention)
+            self_attention, _ = tf.nn.dynamic_rnn(sma_cell,
+                                attention,
+                                dtype=np.float32,
+                                sequence_length=self.input_len_placeholder
+                                )
 
-        with tf.variable_scope("pred", initializer=tf.contrib.layers.xavier_initializer()):
+        with tf.variable_scope("init_output_state", initializer=tf.contrib.layers.xavier_initializer()):
+            print('==> get self question attention')
+            io_cell = PointerCell(p.embed_size, contexts=question_reps)
+            _, init_answer_attention = io_cell.get_max_pooling(question_reps)
+
+        with tf.variable_scope("output_layer_start", initializer=tf.contrib.layers.xavier_initializer()):
             print('==> final prediction')
-            cell = GRUCell(p.embed_size)
-            start_p, state = self.scan_answer(cell, attention)
-            end_p, _ = self.scan_answer(cell, attention, state, True)
+            o_cell = PointerCell(p.embed_size, contexts=self_attention)
+            _, start_p = o_cell.call(state=init_answer_attention)
 
-        return start_offset, tf.add(start_p, epsilon),  tf.add(end_p, epsilon)
+        with tf.variable_scope("output_layer_end", initializer=tf.contrib.layers.xavier_initializer()):
+            o_e_cell = PointerCell(p.embed_size, contexts=self_attention)
+            _, end_p = o_e_cell.call(state=start_p)
 
-    def get_input_representation(self, embeddings, input_vectors):
+        return start_p,  end_p
+
+    def get_input_representation(self, embeddings, input_vectors, len_placeholder, cell=None):
         """Get fact (sentence) vectors via embedding, positional encoding and bi-directional GRU"""
         # get word vectors from embedding
         inputs = tf.nn.embedding_lookup(embeddings, input_vectors)
         # use encoding to get sentence representation plus position encoding
         # (like fb represent)
-        cell = GRUCell(p.embed_size)
+        if cell is None:
+            cell = GRUCell(p.embed_size)
         # outputs with [batch_size, max_time, cell_bw.output_size]
         outputs, _ = tf.nn.bidirectional_dynamic_rnn(
             cell,
             cell,
             inputs,
             dtype=np.float32,
-            sequence_length=self.input_scan_len_placeholder
+            sequence_length=len_placeholder
         )
-
         # f<-> = f-> + f<-
         fact_vecs = tf.reduce_sum(tf.stack(outputs), axis=0)
         # outputs with [batch_size, max_time, cell_bw.output_size = d]
         return fact_vecs
 
-    def quick_skim_representation(self, embeddings, input_vectors, length, len_placeholder, reuse=None):
-        pl = tf.div(len_placeholder, p.fixation)
-        """Get fact (sentence) vectors via embedding, positional encoding and bi-directional GRU"""
-        # get word vectors from embedding
-        chunking_len = int(length / p.fixation)
-        inputs = tf.nn.embedding_lookup(embeddings, input_vectors)
-        inputs = tf.reshape(tf.reshape(inputs, [-1]), [self.config.batch_size, chunking_len, p.fixation * p.embed_size])
-        # use encoding to get sentence representation plus position encoding
-        # (like fb represent)
-        gru_cell = GRUCell(p.embed_size)
-        # outputs with [batch_size, max_time, cell_bw.output_size]
-        outputs, _ = tf.nn.dynamic_rnn(
-            gru_cell,
-            inputs,
-            dtype=np.float32,
-            sequence_length=pl
-        )
-        outputs = tf.transpose(outputs, perm=[0, 2, 1])
-        outputs = tf.nn.dropout(outputs, self.dropout_placeholder, name="quick_skim_dense_do")
-        outputs = tf.layers.dense(outputs, 1,
-                                activation=tf.nn.tanh,
-                                name='quick_skim_dense',
-                                reuse=reuse)
-        outputs = tf.squeeze(outputs)
-        # output will be B x D 
-        return outputs
-
-    def get_attention_map(self, skimming_vectors, question_vectors):
-        attentions = tf.unstack(skimming_vectors, axis=1)
-        # l x b x d
-        tmp = list()
-        # e: b x d
-        prev_ = tf.zeros((self.config.batch_size, p.embed_size), dtype=tf.float32)
-        cell = GRUCell(p.embed_size)
-        for index, a in enumerate(attentions):
-            reuse = bool(index)
-            _, c_ = self.get_max_pooling(question_vectors, a, reuse)
-            _, prev_ = tf.nn.dynamic_rnn(cell,
-                                tf.expand_dims(c_, 1),
-                                dtype=np.float32,
-                                sequence_length=self.pred_len_placeholder,
-                                initial_state=prev_
-                                )
-            tmp.append(prev_)
-        return tf.transpose(tf.stack(tmp), perm=[1,0,2])
-
-
-    def scan_answer(self, cell, init_vector, init_state=None, reuse=False):
-        # init_vector: B x L x D
-        # question: B x M x D
-        # e: b x d
-        if init_state is None:
-            init_state = tf.zeros((self.config.batch_size, p.embed_size), dtype=tf.float32)
-        pred, c_ = self.get_max_pooling(init_vector, init_state, reuse)
-        _, f_state = tf.nn.dynamic_rnn(cell,
-                            tf.expand_dims(c_, 1),
-                            dtype=np.float32,
-                            sequence_length=self.pred_len_placeholder,
-                            initial_state=init_state
-                            )
-        return pred, f_state
-
-    def get_max_pooling(self, context, time_step_vector, reuse=False):
-        """ sum over context to single vectzor"""
-        context_ = tf.unstack(context, axis=1)
-        tmp = list()
-        for c_ in context_:
-            tmp.append(tf.concat([c_, time_step_vector], axis=1))
-        # B x L x D
-        s_ = tf.transpose(tf.stack(tmp), perm=[1,0,2])
-
-        # B x L x D
-        s_ = tf.nn.dropout(s_, self.dropout_placeholder, name="attention_question_do")
-        s_ = tf.layers.dense(s_,
-                            p.embed_size,
-                            activation=tf.nn.tanh,
-                            name="attention_question", 
-                            reuse=reuse)
-        # To B x L x 1
-        s_ = tf.layers.dense(s_,
-                            1,
-                            activation=None,
-                            name="attention_question_softmax", 
-                            reuse=reuse)
-        # To B x L
-        a_ = tf.squeeze(s_)
-        tmp = list()
-
-        for c_, a_v in zip(context_, tf.unstack(a_, axis=1)):
-            tmp.append(tf.stack([e_c * e_a for e_c, e_a in zip(tf.unstack(c_), tf.unstack(a_v))]))
-        u_ = tf.stack(tmp)
-        # return prediction and agg vector
-        # expect a_: BxL, agg: BxD
-        return a_, tf.reduce_sum(u_, 0)
-
     def add_loss_op(self, output_s, output_e):
         """Calculate loss"""
-        so = tf.cast(self.start_offset, tf.int32)
         # get label of start and end inside boundary
-        st_label = self.get_max_boundary(self.get_low_boundary(tf.subtract(self.start_placeholder, so)))
-        ed_label = self.get_max_boundary(self.get_low_boundary(tf.subtract(self.end_placeholder, so)))
         loss = (tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(
-            logits=output_s, labels=st_label)) + \
+            logits=output_s, labels=self.start_placeholder)) + \
             tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(
-            logits=output_e, labels=ed_label)))
+            logits=output_e, labels=self.end_placeholder)))
 
         # add l2 regularization for all variables except biases
         for v in tf.trainable_variables():
@@ -255,17 +151,6 @@ class SquadSkim(Model):
         tf.summary.scalar('loss', loss)
 
         return loss
-
-    def get_max_boundary(self, input_vector):
-        max_no = p.max_scanning - 1
-        max_bound = tf.fill([self.config.batch_size], max_no)
-        cond = input_vector < max_no
-        return tf.where(cond, input_vector, max_bound)
-
-    def get_low_boundary(self, input_vector):
-        zeros = tf.zeros_like(input_vector)
-        cond = input_vector < zeros
-        return tf.where(cond, zeros, input_vector)
 
     def add_training_op(self, loss):
         """Calculate and apply gradients"""
@@ -306,8 +191,7 @@ class SquadSkim(Model):
                     self.question_len_placeholder: ql[index],
                     self.start_placeholder: st[index],
                     self.end_placeholder: ed[index],
-                    self.pred_len_placeholder: np.ones(config.batch_size),
-                    self.input_scan_len_placeholder: np.full(config.batch_size, p.max_scanning),
+                    self.pred_len_placeholder: np.full(config.batch_size, 2),
                     self.dropout_placeholder: dp}
             
             start = st[step * config.batch_size:(step + 1) * config.batch_size]

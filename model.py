@@ -10,7 +10,6 @@ from copy import deepcopy
 import tensorflow as tf
 
 from tensorflow.contrib.rnn import GRUCell
-from attention_gru_cell import AttentionGRUCell
 
 from tensorflow.contrib.cudnn_rnn.python.ops import cudnn_rnn_ops
 
@@ -272,7 +271,7 @@ class Model(object):
         gru_inputs = tf.concat([fact_vecs, attentions], 2)
         # GRU - RNN to generate final e
         with tf.variable_scope('attention_gru', reuse=reuse):
-            _, episode = tf.nn.dynamic_rnn(AttentionGRUCell(p.hidden_size),
+            _, episode = tf.nn.dynamic_rnn(GRUCell(p.hidden_size),
                                            gru_inputs,
                                            dtype=np.float32,
                                            sequence_length=self.input_len_placeholder
