@@ -88,12 +88,12 @@ class PointerCell(RNNCell):
             s_ = tf.transpose(tf.stack(tmp), perm=[1,0,2])
         else:
             s_ = context
-        # B x L x D
-        s_ = tf.layers.dense(s_,
-                            self._num_units,
-                            activation=tf.nn.tanh,
-                            name="attention_question",
-                            reuse=self.reuse)
+        # # B x L x D
+        # s_ = tf.layers.dense(s_,
+        #                     self._num_units,
+        #                     activation=tf.nn.tanh,
+        #                     name="attention_question",
+        #                     reuse=self.reuse)
         # To B x L x 1
         s_ = tf.layers.dense(s_,
                             1,

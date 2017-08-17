@@ -23,6 +23,8 @@ class Config(object):
 
     reset = False
 
+    batch_size = 100
+
     max_epochs = 256
     max_answer_len = 2
     early_stopping = 20
