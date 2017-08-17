@@ -68,7 +68,7 @@ class SquadSkim(Model):
     def inference(self):
         epsilon = tf.constant(1e-10, dtype=tf.float32)
         """Performs inference on the DMN model"""
-        embed = p.embed_size * 2
+        embed = p.hidden_size
         embeddings = tf.Variable(
             self.word_embedding.astype(np.float32), name="Embedding")
        
@@ -133,6 +133,10 @@ class SquadSkim(Model):
         )
         # f<-> = f-> + f<-
         fact_vecs = tf.concat(outputs, axis=2)
+        fact_vecs = tf.layers.dense(fact_vecs,
+                            p.hidden_size,
+                            activation=tf.nn.tanh)
+        # To B x L x 1
         return fact_vecs
 
     def add_loss_op(self, output_s, output_e):
