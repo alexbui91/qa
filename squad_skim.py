@@ -131,8 +131,7 @@ class SquadSkim(Model):
             sequence_length=len_placeholder
         )
         # f<-> = f-> + f<-
-        fact_vecs = tf.reduce_sum(tf.stack(outputs), axis=0)
-        # outputs with [batch_size, max_time, cell_bw.output_size = d]
+        fact_vecs = tf.stack(outputs, axis=2)
         return fact_vecs
 
     def add_loss_op(self, output_s, output_e):
