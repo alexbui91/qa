@@ -101,15 +101,12 @@ class PointerCell(RNNCell):
                             name="attention_question_softmax",
                             reuse=self.reuse)
         # To B x L
-        a_ = tf.squeeze(s_)
-        tmp = list()
-
-        for c_, a_v in zip(context_, tf.unstack(a_, axis=1)):
-            tmp.append(tf.stack([e_c * e_a for e_c, e_a in zip(tf.unstack(c_), tf.unstack(a_v))]))
         u_ = tf.stack(tmp)
+        # BxLxD => BxDxL x BxLx1 => BxD
+        u_ = tf.matmul(tf.transpose(context, perm=[0,2,1]), s_)
         # return prediction and agg vector
         # expect a_: BxL, agg: BxD
-        return a_, tf.reduce_sum(u_, 0)
+        return tf.squeeze(s_), tf.reduce_sum(u_, 0)
 
 class GateAttentionBase(PointerCell):
     
