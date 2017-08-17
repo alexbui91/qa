@@ -101,7 +101,6 @@ class PointerCell(RNNCell):
                             name="attention_question_softmax",
                             reuse=self.reuse)
         # To B x L
-        u_ = tf.stack(tmp)
         # BxLxD => BxDxL x BxLx1 => BxD
         u_ = tf.matmul(tf.transpose(context, perm=[0,2,1]), s_)
         # return prediction and agg vector
