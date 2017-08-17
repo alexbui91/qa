@@ -68,6 +68,7 @@ class SquadSkim(Model):
     def inference(self):
         epsilon = tf.constant(1e-10, dtype=tf.float32)
         """Performs inference on the DMN model"""
+        embed = p.embed_size * 2
         embeddings = tf.Variable(
             self.word_embedding.astype(np.float32), name="Embedding")
        
@@ -82,7 +83,7 @@ class SquadSkim(Model):
         # mix question information to each word in paragraph
         with tf.variable_scope("input_question_attention", initializer=tf.contrib.layers.xavier_initializer()):
             print('==> get input question attention')
-            iqa_cell = GateAttentionBase(p.embed_size, contexts=question_reps)
+            iqa_cell = GateAttentionBase(embed, contexts=question_reps)
             attention, _ = tf.nn.dynamic_rnn(iqa_cell,
                                 word_reps,
                                 dtype=np.float32,
@@ -91,7 +92,7 @@ class SquadSkim(Model):
         
         with tf.variable_scope("self_matching_attention", initializer=tf.contrib.layers.xavier_initializer()):
             print('==> get self paragraph attention')
-            sma_cell = PointerCell(p.embed_size, contexts=attention)
+            sma_cell = PointerCell(embed, contexts=attention)
             self_attention, _ = tf.nn.dynamic_rnn(sma_cell,
                                 attention,
                                 dtype=np.float32,
@@ -100,16 +101,16 @@ class SquadSkim(Model):
 
         with tf.variable_scope("init_output_state", initializer=tf.contrib.layers.xavier_initializer()):
             print('==> get self question attention')
-            io_cell = PointerCell(p.embed_size, contexts=question_reps)
+            io_cell = PointerCell(embed, contexts=question_reps)
             _, init_answer_attention = io_cell.get_max_pooling(question_reps)
 
         with tf.variable_scope("output_layer_start", initializer=tf.contrib.layers.xavier_initializer()):
             print('==> final prediction')
-            o_cell = PointerCell(p.embed_size, contexts=self_attention)
+            o_cell = PointerCell(embed, contexts=self_attention)
             _, start_p = o_cell.call(state=init_answer_attention)
 
         with tf.variable_scope("output_layer_end", initializer=tf.contrib.layers.xavier_initializer()):
-            o_e_cell = PointerCell(p.embed_size, contexts=self_attention)
+            o_e_cell = PointerCell(embed, contexts=self_attention)
             _, end_p = o_e_cell.call(state=start_p)
 
         return start_p,  end_p
@@ -131,7 +132,7 @@ class SquadSkim(Model):
             sequence_length=len_placeholder
         )
         # f<-> = f-> + f<-
-        fact_vecs = tf.stack(outputs, axis=2)
+        fact_vecs = tf.concat(outputs, axis=2)
         return fact_vecs
 
     def add_loss_op(self, output_s, output_e):

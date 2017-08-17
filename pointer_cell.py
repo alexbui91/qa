@@ -102,10 +102,10 @@ class PointerCell(RNNCell):
                             reuse=self.reuse)
         # To B x L
         # BxLxD => BxDxL x BxLx1 => BxD
-        u_ = tf.matmul(tf.transpose(context, perm=[0,2,1]), s_)
+        u_ = tf.squeeze(tf.matmul(tf.transpose(context, perm=[0,2,1]), s_))
         # return prediction and agg vector
         # expect a_: BxL, agg: BxD
-        return tf.squeeze(s_), tf.reduce_sum(u_, 0)
+        return tf.squeeze(s_), u_
 
 class GateAttentionBase(PointerCell):
     
