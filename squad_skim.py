@@ -44,23 +44,23 @@ class SquadSkim(Model):
         """add data placeholder to graph """
         
         self.input_placeholder = tf.placeholder(tf.int32, shape=(
-            self.config.batch_size, self.max_input_len))  
+            p.batch_size, self.max_input_len))  
         self.question_placeholder = tf.placeholder(tf.int32, shape=(
-            self.config.batch_size, self.max_question_len))  
+            p.batch_size, self.max_question_len))  
         # for quick skim
         self.input_len_placeholder = tf.placeholder(
-            tf.int32, shape=(self.config.batch_size,))
+            tf.int32, shape=(p.batch_size,))
         # for full scan
         self.question_len_placeholder = tf.placeholder(
-            tf.int32, shape=(self.config.batch_size,))
+            tf.int32, shape=(p.batch_size,))
         
         self.pred_len_placeholder = tf.placeholder(
-            tf.int32, shape=(self.config.batch_size,))
+            tf.int32, shape=(p.batch_size,))
         
         self.start_placeholder = tf.placeholder(
-            tf.int32, shape=(self.config.batch_size,))
+            tf.int32, shape=(p.batch_size,))
         self.end_placeholder = tf.placeholder(
-            tf.int32, shape=(self.config.batch_size,))
+            tf.int32, shape=(p.batch_size,))
         # place holder for start vs end position
 
         self.dropout_placeholder = tf.placeholder(tf.float32)
@@ -175,7 +175,7 @@ class SquadSkim(Model):
         if train_op is None:
             train_op = tf.no_op()
             dp = 1
-        total_steps = len(data[0]) // config.batch_size
+        total_steps = len(data[0]) // p.batch_size
         total_loss = []
         accuracy = 0
 
@@ -187,19 +187,19 @@ class SquadSkim(Model):
                                 np.asarray(st, dtype=config.floatX), np.asarray(ed, dtype=config.floatX)
         ct, ct_l, q, ql, st, ed = ct[r], ct_l[r], q[r], ql[r], st[r], ed[r]
         for step in range(total_steps):
-            index = range(step * config.batch_size,
-                          (step + 1) * config.batch_size)
+            index = range(step * p.batch_size,
+                          (step + 1) * p.batch_size)
             feed = {self.input_placeholder: ct[index],
                     self.input_len_placeholder: ct_l[index],
                     self.question_placeholder: q[index],
                     self.question_len_placeholder: ql[index],
                     self.start_placeholder: st[index],
                     self.end_placeholder: ed[index],
-                    self.pred_len_placeholder: np.full(config.batch_size, 2),
+                    self.pred_len_placeholder: np.full(p.batch_size, 2),
                     self.dropout_placeholder: dp}
             
-            start = st[step * config.batch_size:(step + 1) * config.batch_size]
-            end = ed[step * config.batch_size:(step + 1) * config.batch_size]
+            start = st[step * p.batch_size:(step + 1) * p.batch_size]
+            end = ed[step * p.batch_size:(step + 1) * p.batch_size]
             # if config.strong_supervision:
             #     feed[self.rel_label_placeholder] = r[index]
 
