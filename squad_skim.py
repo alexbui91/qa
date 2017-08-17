@@ -90,14 +90,14 @@ class SquadSkim(Model):
                                 sequence_length=self.input_len_placeholder
                                 )
         
-        with tf.variable_scope("self_matching_attention", initializer=tf.contrib.layers.xavier_initializer()):
-            print('==> get self paragraph attention')
-            sma_cell = PointerCell(embed, contexts=attention)
-            self_attention, _ = tf.nn.dynamic_rnn(sma_cell,
-                                attention,
-                                dtype=np.float32,
-                                sequence_length=self.input_len_placeholder
-                                )
+        # with tf.variable_scope("self_matching_attention", initializer=tf.contrib.layers.xavier_initializer()):
+        #     print('==> get self paragraph attention')
+        #     sma_cell = PointerCell(embed, contexts=attention)
+        #     self_attention, _ = tf.nn.dynamic_rnn(sma_cell,
+        #                         attention,
+        #                         dtype=np.float32,
+        #                         sequence_length=self.input_len_placeholder
+        #                         )
 
         with tf.variable_scope("init_output_state", initializer=tf.contrib.layers.xavier_initializer()):
             print('==> get self question attention')
@@ -106,11 +106,11 @@ class SquadSkim(Model):
 
         with tf.variable_scope("output_layer_start", initializer=tf.contrib.layers.xavier_initializer()):
             print('==> final prediction')
-            o_cell = PointerCell(embed, contexts=self_attention)
+            o_cell = PointerCell(embed, contexts=attention)
             _, start_p = o_cell.call(state=init_answer_attention)
 
         with tf.variable_scope("output_layer_end", initializer=tf.contrib.layers.xavier_initializer()):
-            o_e_cell = PointerCell(embed, contexts=self_attention)
+            o_e_cell = PointerCell(embed, contexts=attention)
             _, end_p = o_e_cell.call(state=start_p)
 
         return start_p,  end_p
