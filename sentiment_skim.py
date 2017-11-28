@@ -17,11 +17,12 @@ from model import Config, Model
 
 class ModelSentiment(Model):
 
-    def set_data(self, train, valid, word_embedding, max_input_len):
+    def set_data(self, train, valid, word_embedding, max_input_len, is_chunking=False):
         self.train = train
         self.valid = valid
         self.word_embedding = word_embedding
         self.max_input_len = max_input_len
+        self.is_chunking = False
 
     def init_ops(self):
         with tf.device('/%s' % p.device):
@@ -87,9 +88,9 @@ class ModelSentiment(Model):
     def get_input_representation(self, embeddings):
         """Get fact (sentence) vectors via embedding, positional encoding and bi-directional GRU"""
         # get word vectors from embedding
-        chunking_len = int(self.max_input_len / p.fixation)
         inputs = tf.nn.embedding_lookup(embeddings, self.input_placeholder)
-        inputs = tf.reshape(tf.reshape(inputs, [-1]), [self.config.batch_size, chunking_len, p.fixation * p.embed_size])
+        # chunking_len = int(self.max_input_len / p.fixation)
+        # inputs = tf.reshape(tf.reshape(inputs, [-1]), [self.config.batch_size, chunking_len, p.fixation * p.embed_size])
         # use encoding to get sentence representation plus position encoding
         # (like fb represent)
         gru_cell = GRUCell(p.embed_size)

@@ -1,0 +1,75 @@
+import utils as u
+import tensorflow as tf
+import numpy as np
+import os
+import sys
+import time
+import argparse
+
+from model import Config
+from embedding_compression import Compression
+
+import properties as p
+import utils
+
+
+def main(restore=False):
+    print("==> Load Word Embedding")
+    word_embedding = utils.load_glove(use_index=True)
+    # init word embedding
+    model = Compression(np.array(word_embedding))
+    # model.set_encoding()
+    model.init_opts()
+    # model.init_data_node()
+    # create model
+    tconfig = tf.ConfigProto(allow_soft_placement=True)
+    non_words = utils.load_file(p.glove_path + '/non_words_50d.txt', False)
+    validation_data = []
+    for w in non_words:
+        w_ = w.replace('\n', '').split(' ')
+        validation_data.append(int(w_[-1]))
+    training_data = utils.sub(range(len(word_embedding)), validation_data)
+    with tf.device('/%s' % p.device):
+        print('==> initializing variables')
+        init = tf.global_variables_initializer()
+        saver = tf.train.Saver()
+
+    with tf.Session(config=tconfig) as session:
+        sum_dir = 'summaries/compression/' + time.strftime("%Y-%m-%d %H %M")
+        if not utils.check_file(sum_dir):
+            os.makedirs(sum_dir)
+        train_writer = tf.summary.FileWriter(sum_dir, session.graph)
+        session.run(init)
+        best_val_loss = float('inf')
+
+        if restore:
+            print('==> restoring weights')
+            saver.restore(session, 'weights/compression.weights')
+
+        print('start compressing')
+        for epoch in xrange(200000):
+            print('Epoch {}'.format(epoch))
+            start = time.time()
+
+            train_loss = model.run_epoch(session, training_data, epoch, train_writer)
+            print('Training loss: {}'.format(train_loss))
+            # run validation after each 1000 iteration
+            if epoch % 1000:
+                valid_loss = model.run_epoch(session, validation_data)
+                print('Validation loss: {}'.format(valid_loss))
+                if valid_loss < best_val_loss:
+                    best_val_loss = valid_loss
+                    print('Saving weights')
+                    saver.save(session, 'weights/compression.weights')
+            print('Total time: {}'.format(time.time() - start))
+        print('Best validation accuracy:', best_val_accuracy)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-r", "--restore",
+                        help="restore previously trained weights (default=false)")
+    
+    args = parser.parse_args()
+    
+    main(args.restore)

@@ -7,6 +7,7 @@ from tensorflow.python.ops import array_ops
 from tensorflow.python.ops import math_ops
 from tensorflow.python.ops.rnn_cell_impl import _linear
 
+import tf_ops
 """
     custom gru cell to pointer cell
     contexts: tensors with shape B x L x D is to sum up to B x D then be the input of next RNN step
@@ -47,7 +48,7 @@ class PointerCell(RNNCell):
     def call(self, inputs=None, state=None):
         """Gated recurrent unit (GRU) with nunits cells."""
         with vs.variable_scope("gate_pointer_cell"):  # Reset gate and update gate.
-            a_, c_ = self.get_max_pooling(self.contexts, inputs, state)
+            a_, c_ = tf_ops.get_max_pooling(self._num_units, self.contexts, inputs, state)
             if self.concat_context:
                 inputs = tf.concat([inputs, c_])
             else:
@@ -71,47 +72,11 @@ class PointerCell(RNNCell):
                 outputs = new_h
         return outputs, new_h
 
-    def get_max_pooling(self, context, time_step_vector=None, prev_=None):
-        """ sum over context to single vectzor"""
-        context_ = tf.unstack(context, axis=1)
-        if not time_step_vector is None or not prev_ is None:
-            tmp = list()
-            for c_ in context_:
-                input_vector = list()
-                input_vector.append(c_)
-                if not time_step_vector is None:
-                    input_vector.append(time_step_vector)
-                if not prev_ is None:
-                    input_vector.append(prev_)
-                tmp.append(tf.concat(input_vector, axis=1))
-            # B x L x D
-            s_ = tf.transpose(tf.stack(tmp), perm=[1,0,2])
-        else:
-            s_ = context
-        # # B x L x D
-        # s_ = tf.layers.dense(s_,
-        #                     self._num_units,
-        #                     activation=tf.nn.tanh,
-        #                     name="attention_question",
-        #                     reuse=self.reuse)
-        # To B x L x 1
-        s_ = tf.layers.dense(s_,
-                            1,
-                            activation=None,
-                            name="attention_question_softmax",
-                            reuse=self.reuse)
-        # To B x L
-        # BxLxD => BxDxL x BxLx1 => BxD
-        u_ = tf.squeeze(tf.matmul(tf.transpose(context, perm=[0,2,1]), s_))
-        # return prediction and agg vector
-        # expect a_: BxL, agg: BxD
-        return tf.squeeze(s_), u_
-
 class GateAttentionBase(PointerCell):
     
     def call(self, inputs=None, state=None):
         """Gated recurrent unit (GRU) with nunits cells."""
-        a_, c_ = self.get_max_pooling(self.contexts, inputs, state)
+        a_, c_ = tf_ops.get_max_pooling(self._num_units, self.contexts, inputs, state)
         with vs.variable_scope("sigmoid_gate"): 
             if self.concat_context:
                 inputs = tf.concat([inputs, c_])
