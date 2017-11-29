@@ -15,7 +15,7 @@ import tensorflow as tf
 import properties as p
 
 class Compression(object):
-    def __init__(self, word_embedding, M=64, K=64, batch_size=128, embedding_size=50, learning_rate=0.0001):
+    def __init__(self, word_embedding=None, M=64, K=64, batch_size=128, embedding_size=50, learning_rate=0.0001):
         self.M = M
         self.K = K
         self.hidden_layer_size = self.M * self.K // 2
@@ -31,7 +31,7 @@ class Compression(object):
         tf.set_random_seed(1234)
         #random A
         # hidden layer
-        embeddings = tf.Variable(self.word_embedding.astype(np.float32), name="Embedding")
+        # embeddings = tf.Variable(self.word_embedding.astype(np.float32), name="Embedding")
         h_ = tf.layers.dense(self.input_placeholder,
                             self.hidden_layer_size,
                             activation=tf.tanh,

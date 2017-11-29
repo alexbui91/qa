@@ -13,7 +13,7 @@ import properties as p
 import utils
 
 
-def main(restore=False):
+def main(restore=0):
     print("==> Load Word Embedding")
     word_embedding = utils.load_glove(use_index=True)
     # init word embedding
@@ -41,34 +41,36 @@ def main(restore=False):
         train_writer = tf.summary.FileWriter(sum_dir, session.graph)
         session.run(init)
         best_val_loss = float('inf')
-
+        best_epoch = 0
         if restore:
             print('==> restoring weights')
             saver.restore(session, 'weights/compression.weights')
 
         print('start compressing')
-        for epoch in xrange(200000):
+        for epoch in xrange(p.total_iteration):
             print('Epoch {}'.format(epoch))
             start = time.time()
 
             train_loss = model.run_epoch(session, training_data, epoch, train_writer)
             print('Training loss: {}'.format(train_loss))
             # run validation after each 1000 iteration
-            if epoch % 1000:
+            if (epoch % p.validation_checkpoint) == 0:
                 valid_loss = model.run_epoch(session, validation_data)
                 print('Validation loss: {}'.format(valid_loss))
                 if valid_loss < best_val_loss:
                     best_val_loss = valid_loss
+                    best_epoch = epoch
                     print('Saving weights')
                     saver.save(session, 'weights/compression.weights')
+            if (epoch - best_epoch) >= 100:
+                break
             print('Total time: {}'.format(time.time() - start))
-        print('Best validation accuracy:', best_val_accuracy)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-r", "--restore",
-                        help="restore previously trained weights (default=false)")
+                        help="restore previously trained weights (default=false)", type=int)
     
     args = parser.parse_args()
     
