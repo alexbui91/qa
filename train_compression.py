@@ -6,7 +6,6 @@ import sys
 import time
 import argparse
 
-from model import Config
 from embedding_compression import Compression
 
 import properties as p
@@ -62,7 +61,7 @@ def main(restore=0):
                     best_epoch = epoch
                     print('Saving weights')
                     saver.save(session, 'weights/compression.weights')
-            if (epoch - best_epoch) >= 100:
+            if (epoch - best_epoch) >= p.early_stopping:
                 break
             print('Total time: {}'.format(time.time() - start))
 

@@ -29,7 +29,7 @@ class Compression(object):
 
     def build_model(self):
         tf.set_random_seed(1234)
-        rg = np.sqrt(6. / (self.embedding_size + self.M * self.K))
+        rg = np.sqrt(6. / (self.embedding_size + self.K))
         #random A
         # hidden layer
         # embeddings = tf.Variable(self.word_embedding.astype(np.float32), name="Embedding")
@@ -43,14 +43,14 @@ class Compression(object):
                                     self.K,
                                     activation=None, name="alpha_plus")
         alp_ = tf.nn.softplus(alp_value, name="alpha_softplus")
-        G = tf.random_uniform([self.batch_size, self.M, self.K], 0, 1, dtype=tf.float32, name="gumbel")
+        G = tf.Variable(tf.random_uniform([self.batch_size, self.M, self.K], 0, 1, dtype=tf.float32), name="gumbel", trainable=True)
         alp_log = tf.log(alp_) + G
         # one-hot => argmax to get c
         # need to extract this layer to Cw
         d_ = tf.nn.softmax(alp_log, name="one_hot")
         # reconstruction embedding
         # need to extract weight of this layer -> code book 
-        code_book = tf.random_uniform([self.batch_size, self.M, self.K, self.embedding_size], -rg, rg, dtype=tf.float32, name="code_book_matrix")
+        code_book = tf.Variable(tf.random_uniform([self.batch_size, self.M, self.K, self.embedding_size], -rg, rg, dtype=tf.float32), name="code_book", trainable=True)
         d_dense = tf.squeeze(tf.matmul(tf.expand_dims(d_, axis=2), code_book))
         # d_dense = tf.layers.dense(d_, self.embedding_size, =None, name="code_book_matrix")
         e_ = tf.reduce_sum(d_dense, axis=1, name="final")
