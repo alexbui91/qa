@@ -43,8 +43,9 @@ class Compression(object):
                                     self.K,
                                     activation=None, name="alpha_plus")
         alp_ = tf.nn.softplus(alp_value, name="alpha_softplus")
-        G = tf.Variable(tf.random_uniform([self.batch_size, self.M, self.K], 0, 1, dtype=tf.float32), name="gumbel", trainable=True)
-        alp_log = tf.log(alp_) + G
+        # init noise term
+        G = tf.log(-tf.log(tf.random_uniform([self.batch_size, self.M, self.K], 0, 1, dtype=tf.float32)))
+        alp_log = tf.log(alp_) - G
         # one-hot => argmax to get c
         # need to extract this layer to Cw
         d_ = tf.nn.softmax(alp_log, name="one_hot")
