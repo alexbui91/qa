@@ -12,6 +12,15 @@ import properties as p
 import utils
 
 
+def stringify_code_words(code_words):
+    tmp = ""
+    for row in code_words:
+        for col in row:
+            tmp += "%i" % col
+        tmp += "\n"
+    return tmp
+
+
 def main(restore=0):
     print("==> Load Word Embedding")
     word_embedding = utils.load_glove(use_index=True)
@@ -50,16 +59,20 @@ def main(restore=0):
             print('Epoch {}'.format(epoch))
             start = time.time()
 
-            train_loss = model.run_epoch(session, training_data, epoch, train_writer)
+            train_loss, code_words = model.run_epoch(session, training_data, epoch, train_writer)
             print('Training loss: {}'.format(train_loss))
             # run validation after each 1000 iteration
             if (epoch % p.validation_checkpoint) == 0:
-                valid_loss = model.run_epoch(session, validation_data)
+                valid_loss, code_words_valid = model.run_epoch(session, validation_data)
                 print('Validation loss: {}'.format(valid_loss))
                 if valid_loss < best_val_loss:
                     best_val_loss = valid_loss
                     best_epoch = epoch
                     print('Saving weights')
+                    code_words_str = stringify_code_words(code_words)
+                    code_words_valid_str = stringify_code_words(code_words_valid)
+                    utils.save_file("weights/code_words_training.txt", code_words_str, use_pickle=False)
+                    utils.save_file("weights/code_words_valid.txt", code_words_valid_str, use_pickle=False)
                     saver.save(session, 'weights/compression.weights')
             if (epoch - best_epoch) >= p.early_stopping:
                 break

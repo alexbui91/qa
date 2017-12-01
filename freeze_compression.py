@@ -64,7 +64,7 @@ class FreezeGraphTest():
             #     output_node = sess.graph.get_tensor_by_name("one_hot")
             #     print
 
-    def get_trained(self):
+    def get_trained(self, layer=""):
         checkpoint_path = "weights/compression.weights"
         model = Compression()
         model.init_opts()
@@ -75,10 +75,14 @@ class FreezeGraphTest():
             sess.run(init)
             saver = tf.train.import_meta_graph('weights/compression.weights.meta')
             saver.restore(sess, tf.train.latest_checkpoint('weights'))
+            val = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, layer)
             print(tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES))
+            if val:
+                val = val[0]
+                return val.eval()
 
 if __name__ == "__main__":
     # test.main()
     fc = FreezeGraphTest()
     # fc._testFreezeGraph()
-    fc.get_trained()
+    code_book = fc.get_trained("code_book")

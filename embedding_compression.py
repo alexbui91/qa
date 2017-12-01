@@ -46,15 +46,21 @@ class Compression(object):
         # init noise term
         G = tf.log(-tf.log(tf.random_uniform([self.batch_size, self.M, self.K], 0, 1, dtype=tf.float32)))
         alp_log = tf.log(alp_) - G
+        if  p.softmax_temperature and p.softmax_temperature != 1:
+            alp_log /= p.softmax_temperature
         # one-hot => argmax to get c
-        # need to extract this layer to Cw
+        # need to extract this layer to Cw 
+        # d_ B x M x K => M x B x K
         d_ = tf.nn.softmax(alp_log, name="one_hot")
+        self.code_words = tf.argmax(d_, axis=2)
         # reconstruction embedding
         # need to extract weight of this layer -> code book 
-        code_book = tf.Variable(tf.random_uniform([self.batch_size, self.M, self.K, self.embedding_size], -rg, rg, dtype=tf.float32), name="code_book", trainable=True)
-        d_dense = tf.squeeze(tf.matmul(tf.expand_dims(d_, axis=2), code_book))
+        # code_book = M x K x H
+        code_book = tf.Variable(tf.random_uniform([self.M, self.K, self.embedding_size], -rg, rg, dtype=tf.float32), name="code_book", trainable=True)
+        d_dense = tf.matmul(tf.transpose(d_, perm=[1,0,2]), code_book)
         # d_dense = tf.layers.dense(d_, self.embedding_size, =None, name="code_book_matrix")
-        e_ = tf.reduce_sum(d_dense, axis=1, name="final")
+        e_ = tf.reduce_sum(tf.transpose(d_dense, perm=[1,0,2]), axis=1, name="final")
+        print(e_.get_shape())
         return e_
 
     def add_loss_op(self, target):
@@ -94,20 +100,21 @@ class Compression(object):
     def run_epoch(self, session, data, num_epoch=0, train_writer=None):
         total_loss = []
         total_steps = len(data) // self.batch_size
+        vocabs = []
         for step in xrange(total_steps):
             index = range(step * self.batch_size, (step + 1) * self.batch_size)
             feed = {self.input_placeholder: self.word_embedding[index]}
-            loss, summary = session.run([self.loss, self.merged], feed_dict=feed)
-
+            loss, code_words, summary = session.run([self.loss, self.code_words, self.merged], feed_dict=feed)
             if train_writer is not None:
                 train_writer.add_summary(
                     summary, num_epoch * total_steps + step)
-            
+            for row in code_words:
+                vocabs.append(row)
             total_loss.append(loss)
             sys.stdout.write('\r{} / {} : loss = {}'.format(
                 step, total_steps, np.mean(total_loss)))
             sys.stdout.flush()
             sys.stdout.write('\r')
-        return np.mean(total_loss)
+        return np.mean(total_loss), vocabs
 
     
