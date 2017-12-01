@@ -16,7 +16,7 @@ def stringify_code_words(code_words):
     tmp = ""
     for row in code_words:
         for col in row:
-            tmp += "%i" % col
+            tmp += "%i " % col
         tmp += "\n"
     return tmp
 

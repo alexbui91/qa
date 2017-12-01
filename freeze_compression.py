@@ -13,6 +13,8 @@ from tensorflow.python.tools import freeze_graph
 
 from embedding_compression import Compression
 
+import utils
+
 class FreezeGraphTest():
 
     def _testFreezeGraph(self):
@@ -86,3 +88,4 @@ if __name__ == "__main__":
     fc = FreezeGraphTest()
     # fc._testFreezeGraph()
     code_book = fc.get_trained("code_book")
+    utils.save_file("weights/code_book.pkl", code_book)
