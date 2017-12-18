@@ -8,21 +8,18 @@ import numpy as np
 
 import tensorflow as tf
 
-from tensorflow.contrib.rnn import GRUCell
+from tensorflow.contrib.rnn import BasicLSTMCell
 
 import properties as p
 
-from model import Config, Model
+class ModelSentiment():
 
-
-class ModelSentiment(Model):
-
-    def set_data(self, train, valid, word_embedding, max_input_len, is_chunking=False):
+    def set_data(self, train, valid, word_embedding, max_input_len, using_compression=False):
         self.train = train
         self.valid = valid
         self.word_embedding = word_embedding
         self.max_input_len = max_input_len
-        self.is_chunking = False
+        self.using_compression = False
 
     def init_ops(self):
         with tf.device('/%s' % p.device):
@@ -43,12 +40,12 @@ class ModelSentiment(Model):
         """add data placeholder to graph """
         
         self.input_placeholder = tf.placeholder(tf.int32, shape=(
-            self.config.batch_size, self.max_input_len))  
+            p.batch_size, self.max_input_len))  
 
         self.input_len_placeholder = tf.placeholder(
-            tf.int32, shape=(self.config.batch_size,))
+            tf.int32, shape=(p.batch_size,))
         self.pred_placeholder = tf.placeholder(
-            tf.int32, shape=(self.config.batch_size,))
+            tf.int32, shape=(p.batch_size,))
         # place holder for start vs end position
 
         self.dropout_placeholder = tf.placeholder(tf.float32)
@@ -63,15 +60,15 @@ class ModelSentiment(Model):
         with tf.variable_scope("input", initializer=tf.contrib.layers.xavier_initializer()):
             print('==> get input representation')
             word_reps = self.get_input_representation(embeddings)
-            word_reps = tf.concat(tf.unstack(word_reps, axis=1), 1)
-            print(word_reps)
+            word_reps = tf.reduce_mean(word_reps, axis=1)
+            # print(word_reps)
 
         with tf.variable_scope("hidden", initializer=tf.contrib.layers.xavier_initializer()):
             
-            output = tf.layers.dense(word_reps,
-                                    p.embed_size,
-                                    activation=tf.nn.tanh,
-                                    name="h1")
+            # output = tf.layers.dense(word_reps,
+            #                         p.embed_size,
+            #                         activation=tf.nn.tanh,
+            #                         name="h1")
 
             output = tf.layers.dense(word_reps,
                                     p.hidden_size,
@@ -90,10 +87,10 @@ class ModelSentiment(Model):
         # get word vectors from embedding
         inputs = tf.nn.embedding_lookup(embeddings, self.input_placeholder)
         # chunking_len = int(self.max_input_len / p.fixation)
-        # inputs = tf.reshape(tf.reshape(inputs, [-1]), [self.config.batch_size, chunking_len, p.fixation * p.embed_size])
+        # inputs = tf.reshape(tf.reshape(inputs, [-1]), [p.batch_size, chunking_len, p.fixation * p.embed_size])
         # use encoding to get sentence representation plus position encoding
         # (like fb represent)
-        gru_cell = GRUCell(p.embed_size)
+        gru_cell = BasicLSTMCell(p.embed_size)
         # outputs with [batch_size, max_time, cell_bw.output_size]
         outputs, _ = tf.nn.dynamic_rnn(
             gru_cell,
@@ -114,7 +111,7 @@ class ModelSentiment(Model):
         # add l2 regularization for all variables except biases
         for v in tf.trainable_variables():
             if not 'bias' in v.name.lower():
-                loss += self.config.l2 * tf.nn.l2_loss(v)
+                loss += p.l2 * tf.nn.l2_loss(v)
 
         tf.summary.scalar('loss', loss)
 
@@ -123,7 +120,7 @@ class ModelSentiment(Model):
 
     def add_training_op(self, loss):
         """Calculate and apply gradients"""
-        opt = tf.train.AdamOptimizer(learning_rate=self.config.lr)
+        opt = tf.train.AdamOptimizer(learning_rate=p.lr)
         gvs = opt.compute_gradients(loss)
 
         train_op = opt.apply_gradients(gvs)
@@ -135,33 +132,29 @@ class ModelSentiment(Model):
         return pred
 
     def run_epoch(self, session, data, num_epoch=0, train_writer=None, train_op=None, verbose=2, train=False):
-        config = self.config
-        dp = config.dropout
+        dp = p.dropout
         if train_op is None:
             train_op = tf.no_op()
             dp = 1
-        total_steps = len(data[0]) // config.batch_size
+        total_steps = len(data[0]) // p.batch_size
         total_loss = []
         accuracy = 0
 
         # shuffle data
         r = np.random.permutation(len(data[0]))
         ct, ct_l, pr = data
-        ct, ct_l, pr = np.asarray(ct, dtype=config.floatX), np.asarray(ct_l, dtype=config.floatX), np.asarray(pr, dtype=config.floatX)
+        ct, ct_l, pr = np.asarray(ct, dtype=np.float32), np.asarray(ct_l, dtype=np.float32), np.asarray(pr, dtype=np.float32)
         ct, ct_l, pr = ct[r], ct_l[r], pr[r]
         for step in range(total_steps):
-            index = range(step * config.batch_size,
-                          (step + 1) * config.batch_size)
+            index = range(step * p.batch_size,
+                          (step + 1) * p.batch_size)
             feed = {self.input_placeholder: ct[index],
                     self.input_len_placeholder: ct_l[index] / p.fixation,
                     self.pred_placeholder: pr[index],
                     self.dropout_placeholder: dp}
             
-            pred_labels = pr[step * config.batch_size:(step + 1) * config.batch_size]
+            pred_labels = pr[step * p.batch_size:(step + 1) * p.batch_size]
             
-            # if config.strong_supervision:
-            #     feed[self.rel_label_placeholder] = r[index]
-
             loss, pred, summary, _ = session.run(
                 [self.calculate_loss, self.pred, self.merged, train_op], feed_dict=feed)
 

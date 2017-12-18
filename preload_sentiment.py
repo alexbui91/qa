@@ -1,80 +1,179 @@
-import json
-import utils as u
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import os
+import utils
+import shutil
+import random
 import numpy as np
-import preload_squad as p
+from nltk.tokenize import RegexpTokenizer
 import properties as pr
-# from pprint import pprint
 
-def make_idx(vocabs, name):
-    with open(name) as data_file:    
-        max_input_len = 0
-        data = data_file.readlines()
-        default_del = '|999999|'
-        results_y = list()
-        sents = list()        
-        for row in data:
-            cols = row.split(default_del)
-            c1 = int(cols[0])
-            if c1 == 0:
-                c1 = 0
-            else:
-                c1 = 1
-            results_y.append(c1)
-            sent = cols[-1].lower()
-            words = p.get_idx(vocabs, sent)
-            if max_input_len < len(words):
-                max_input_len = len(words)
-            sents.append(words)
-             
-    return pad_data(sents, results_y, max_input_len)
+prefix = "/home/alex/Documents/nlp/code/lstm_sentiment/data/aclImdb";
+vocabs_path = "./sentiment/vocabs_imdb.txt"
+vocabs_pkl = "./sentiment/vocabs_imdb.pkl"
+embedding_path = "./sentiment/embedding_imdb.pkl"
+test = "/test"
+train = "/train"
+neg = "/neg"
+pos = "/pos"
+un = "/unsup"
 
 
-def pad_data(data, pred, max_input_len):
-    contexts, contexts_len = list(), list()
-    if max_input_len % pr.fixation != 0:
-        max_input_len = (max_input_len / pr.fixation + 1) * pr.fixation
+def get_vocabs(appended, vocabs, path):
+    txt = "";
+    files = os.listdir(path)
+    print("path %s: %i" % (path, len(files)))
+    regex = RegexpTokenizer(r'\w+')
+    for file in files:
+        with open(os.path.join(path, file)) as f:
+            data = f.readlines()
+            for sent in data:
+                words = sent.lower().split(' ')
+                for w in words:
+                    # if w in vocabs:
+                    #     txt += w + "\n"
+                    #     appended[w] = 1
+                    # else:
+                    a = ''.join([c for c in w if c.isalnum()]);
+                    # word is special case like :) :(
+                    if not a:
+                        if w in vocabs:
+                            if w not in appended:
+                                txt += w + "\n"
+                                appended[w] = 1
+                    else:
+                        # word is normal case
+                        if a in vocabs:
+                            if a not in appended:
+                                txt += a + "\n"
+                                appended[a] = 1
+                        else:
+                            # word has special characters
+                            words = regex.tokenize(w)
+                            if len(words):
+                                w_ = '_'.join(words)
+                                if w_ in vocabs:
+                                    if w_ not in appended:
+                                        txt += w_ + "\n"
+                                        appended[w_] = 1
+                                else:
+                                    for w_ in words:
+                                        if w_ in vocabs:
+                                            if w_ not in appended:
+                                                txt += w_ + "\n"
+                                                appended[w_] = 1
+                                        else:
+                                            w_ = ''.join([c for c in w_ if c.isalnum()]);
+                                            if w_ in vocabs:
+                                                txt += w_ + "\n"
+                                                appended[w_] = 1
+                    # if w not in vocabs:
+                    #     a = ''.join([c for c in w if c.isalnum()]);
+                    #     if a:
+                    #         if a not in vocabs:
+                    #             txt += a + "\n"
+                    #             vocabs[a] = 1
+                    #     else:
+                    #         txt += w + "\n"
+                    #         vocabs[w] = 1
+    return txt;
 
-    for sent in data:
-        contexts_len.append(len(sent))
 
-        context = p.pad_row(sent, max_input_len)
-        contexts.append(context)
-
-    return contexts, contexts_len, pred
-
-
-def load_file(vocabs, name):
-    with open(name) as data_file:    
-        data = data_file.readlines()
-        default_del = '|999999|'
-        for row in data:
-            cols = row.split(default_del)
-            c1 = int(cols[0])
-            if c1 == 0:
-                c1 = 0
-            else:
-                c1 = 1
-            sent = cols[-1].lower()
-            p.get_vocabs(vocabs, sent)
+def build_embedding():
+    vocabs = utils.load_file(vocabs_path, use_pickle=False)
+    word_embedding = utils.load_glove()
+    embedding = [];
+    for w in vocabs:
+        w = w.replace('\n', '');
+        if w in word_embedding:
+            embedding.append(word_embedding[w])
+    utils.save_file(embedding_path, embedding)
 
 
-def preload_vocabs():
-    vocabs = dict()
-    load_file(vocabs, '/home/alex/Documents/nlp/code/data/training_twitter_full_.txt')
-    load_file(vocabs, '/home/alex/Documents/nlp/code/data/test_twitter_.txt')
-    u.save_file_utf8('%s/%s' % (folder, 'vocabs_text.txt'), p.convert_vocab_to_text(vocabs))
+def build_index(vocabs, path, tag=None):
+    output = [];
+    files = os.listdir(path)
+    print("path %s: %i" % (path, len(files)))
+    regex = RegexpTokenizer(r'\w+')
+    for file in files:
+        with open(os.path.join(path, file)) as f:
+            sent = []
+            data = f.readlines()
+            for s in data:
+                words = s.lower().split(' ')
+                for w in words:
+                    a = ''.join([c for c in w if c.isalnum()]);
+                    # word is special case like :) :(
+                    if not a:
+                        if w in vocabs:
+                            sent.append(vocabs[w])
+                    else:
+                        # word is normal case
+                        if a in vocabs:
+                            sent.append(vocabs[a])
+                        else:
+                            # word has special characters
+                            words = regex.tokenize(w)
+                            if len(words):
+                                w_ = '_'.join(words)
+                                if w_ in vocabs:
+                                    sent.append(vocabs[w_])
+                                else:
+                                    for w_ in words:
+                                        if w_ in vocabs:
+                                            sent.append(vocabs[w_])
+                                        else:
+                                            w_ = ''.join([c for c in w_ if c.isalnum()]);
+                                            if w_ in vocabs:
+                                                sent.append(vocabs[w_])
+            if sent:
+                output.append(sent)
+    print("output: %i" % len(output));
+    return output
 
-folder = 'sentiment'
 
 if __name__ == "__main__":
-    vocab_file = '%s/%s' % (folder, 'vocabs_fine_tuned.pkl')
-    if not u.check_file(vocab_file):
-        if not u.check_file('%s/vocabs_text.txt ' % folder):
-            preload_vocabs()
-        vocabs = p.get_vocabs_from_text(folder)
-        u.save_file(vocab_file, vocabs)
-    else: 
-        vocabs = u.load_file(vocab_file)
-        
-    contexts, contexts_len, pred = make_idx(vocabs, '/home/alex/Documents/nlp/code/data/training_twitter_full.txt')
-    u.save_file('sentiment/sentiment_chunking.pkl', (contexts, contexts_len, pred))
+    test_p = prefix + test
+    train_p = prefix + train
+    # txt = ""
+    # vocabs_ar = utils.load_file(vocabs_path, use_pickle=False)
+    # vocabs = dict()
+    # appended = dict()
+    # for x in vocabs_ar:
+    #     x = x.replace("\n", "")
+    #     vocabs[x] = 1
+    # # vocabs = OrderedDict(sorted(vocabs.items(), key=lambda t: t[0]))
+    # txt = get_vocabs(appended, vocabs, test_p + neg)
+    # txt += get_vocabs(appended, vocabs, test_p + pos)
+    # txt += get_vocabs(appended, vocabs, train_p + neg)
+    # txt += get_vocabs(appended, vocabs, train_p + pos)
+    # txt += get_vocabs(appended, vocabs, train_p + un)
+    # utils.save_file("vocabs.txt", txt, use_pickle=False)
+
+    # build_embedding()
+    # vocabs = utils.load_file(vocabs_path, use_pickle=False);
+    # a = {}
+    # for e, w in enumerate(vocabs):
+    #     w = w.replace('\n', '')
+    #     a[w] = e
+    # utils.save_file(vocabs_pkl, a)
+
+    vocabs = utils.load_file(vocabs_pkl);
+    test = []
+    n = build_index(vocabs, test_p + neg)
+    p = build_index(vocabs, test_p + pos)
+    test.append(n)
+    test.append(p)
+    train = []
+    n = build_index(vocabs, train_p + neg)
+    p = build_index(vocabs, train_p + pos)
+    train.append(n)
+    train.append(p)
+    un_s = build_index(vocabs, train_p + un)
+    fo = {
+        'test' : test,
+        'train' : train,
+        'un' : un_s
+    }
+    utils.save_file(pr.dataset_imdb, fo)

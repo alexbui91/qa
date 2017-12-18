@@ -25,7 +25,7 @@ def main(restore=0):
     print("==> Load Word Embedding")
     word_embedding = utils.load_glove(use_index=True)
     # init word embedding
-    model = Compression(np.array(word_embedding))
+    model = Compression(np.array(word_embedding), M=p.book_size, K=p.code_size)
     # model.set_encoding()
     model.init_opts()
     # model.init_data_node()
