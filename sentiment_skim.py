@@ -178,7 +178,7 @@ class ModelSentiment():
             index = range(step * p.batch_size,
                           (step + 1) * p.batch_size)
             feed = {self.input_placeholder: ct[index],
-                    self.input_len_placeholder: ct_l[index] / p.fixation,
+                    self.input_len_placeholder: ct_l[index],
                     self.pred_placeholder: pr[index],
                     self.dropout_placeholder: dp}
             

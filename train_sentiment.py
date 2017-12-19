@@ -6,7 +6,6 @@ import sys
 import time
 import argparse
 
-from model import Config
 from sentiment_skim import ModelSentiment
 
 import properties as p
