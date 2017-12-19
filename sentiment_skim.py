@@ -14,13 +14,21 @@ import properties as p
 
 class ModelSentiment():
 
-    def set_data(self, train, valid, word_embedding, max_input_len, using_compression=False):
-        self.train = train
-        self.valid = valid
+
+    def __init__(self, word_embedding=None, max_input_len=None, using_compression=False, book=None, words=None):
         self.word_embedding = word_embedding
         self.max_input_len = max_input_len
-        self.using_compression = False
+        self.using_compression = using_compression
+        self.book = book
+        self.words = words
 
+    def set_data(self, train, valid):
+        self.train = train
+        self.valid = valid
+        
+    def set_embedding(self):
+        self.word_embedding = word_embedding
+    
     def init_ops(self):
         with tf.device('/%s' % p.device):
             # init memory
@@ -54,8 +62,10 @@ class ModelSentiment():
         """Performs inference on the DMN model"""
 
         # set up embedding
-        embeddings = tf.Variable(
-            self.word_embedding.astype(np.float32), name="Embedding")
+        embeddings = None
+        if not self.using_compression:
+            embeddings = tf.Variable(
+                self.word_embedding.astype(np.float32), name="Embedding")
        
         with tf.variable_scope("input", initializer=tf.contrib.layers.xavier_initializer()):
             print('==> get input representation')
@@ -82,10 +92,29 @@ class ModelSentiment():
                                     name="fn")
         return output
 
+    def build_book(self):
+        b = tf.Variable(self.book, name="book", trainable=False)
+        w = tf.Variable(self.words, name="words", trainable=False)
+        return b, w
+
     def get_input_representation(self, embeddings):
         """Get fact (sentence) vectors via embedding, positional encoding and bi-directional GRU"""
-        # get word vectors from embedding
-        inputs = tf.nn.embedding_lookup(embeddings, self.input_placeholder)
+        inputs = None
+        if self.using_compression:
+            b_embedding, w_embedding = self.build_book()
+            # from code words => build one hot
+            # B x L x M: batchsize x length_sentence
+            d = tf.nn.embedding_lookup(w_embedding, self.input_placeholder)
+            # => B x L x M x K
+            d_ = tf.reshape(d, [-1])
+            d_ = tf.one_hot(d_, depth=p.code_size, axis=-1)
+            d_ = tf.reshape(d_, [p.batch_size * self.max_input_len, p.book_size, p.code_size]);
+            #  => M x B * L x K => B * L x K
+            inputs = tf.reduce_sum(tf.matmul(tf.transpose(d_, perm=[1, 0, 2]), b_embedding), axis=0);
+            inputs = tf.reshape(tf.reshape(inputs, [-1]), [p.batch_size, self.max_input_len, p.embed_size])
+        else:
+            # get word vectors from embedding
+            inputs = tf.nn.embedding_lookup(embeddings, self.input_placeholder)
         # chunking_len = int(self.max_input_len / p.fixation)
         # inputs = tf.reshape(tf.reshape(inputs, [-1]), [p.batch_size, chunking_len, p.fixation * p.embed_size])
         # use encoding to get sentence representation plus position encoding
@@ -96,7 +125,7 @@ class ModelSentiment():
             gru_cell,
             inputs,
             dtype=np.float32,
-            sequence_length=self.input_len_placeholder
+            sequence_length=self.input_len_placeholder,
         )
 
         return outputs
@@ -157,7 +186,6 @@ class ModelSentiment():
             
             loss, pred, summary, _ = session.run(
                 [self.calculate_loss, self.pred, self.merged, train_op], feed_dict=feed)
-
             if train_writer is not None:
                 train_writer.add_summary(
                     summary, num_epoch * total_steps + step)

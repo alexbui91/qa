@@ -52,9 +52,19 @@ def prepare_data(data):
     return output, output_l, pre
 
 
-def main(restore=False):
+def load_code_words(url):
+    dat = utils.load_file(url, use_pickle=False)
+    book = [];
+    for d in dat:
+        d = d.replace('\n', '')
+        a = d.split(' ')
+        a = [x for x in a if x]
+        book.append(map(int, a))
+    return book
+
+
+def main(restore=False, b="", w=""):
     word_embedding = None
-    
     # if u.check_file(p.sentiment_embedding_path):
     #     word_embedding = utils.load_file(p.sentiment_embedding_path)
     # else:
@@ -77,12 +87,22 @@ def main(restore=False):
     #     print("==> Done vectors ")
    
     # init word embedding
-    if u.check_file(p.sentiment_embedding_path):
+    book, words = None, None
+    using_compression = False
+    if b and w:
+        book = utils.load_file(b)
+        words = load_code_words(w)
+        using_compression = True
+    elif u.check_file(p.sentiment_embedding_path):
         print("Loading dataset")
         word_embedding = utils.load_file(p.sentiment_embedding_path)
     else:
         raise ValueError("%s is not existed" % p.sentiment_embedding_path)
     
+        # config.strong_supervision = True
+    model = ModelSentiment(np.array(word_embedding), p.max_imdb_sent, using_compression, book, words)
+    model.init_ops()
+
     data = utils.load_file(p.dataset_imdb)
     train = data['train']
     test = data['test']
@@ -91,13 +111,8 @@ def main(restore=False):
     dev_l = int(len(test) * 0.2)
     dev = (test[:dev_l], test_l[:dev_l], pre_t[:dev_l])
     test = (test[dev_l:], test_l[dev_l:], pre_t[dev_l:])
-
-    # config.strong_supervision = True
-    model = ModelSentiment()
-
-    model.set_data(train, dev, np.array(word_embedding), p.max_imdb_sent)
-    # model.set_encoding()
-    model.init_ops()
+    
+    model.set_data(train, dev)
 
      # tf.reset_default_graph()
     print('Start training sentiment')
@@ -171,9 +186,11 @@ def main(restore=False):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-r", "--restore",
-                        help="restore previously trained weights (default=false)")
+    parser.add_argument("-r", "--restore", help="restore previously trained weights (default=false)", type=int)
     
+    parser.add_argument("-b", "--book", help="code book url")
+    parser.add_argument("-w", "--word", help="code words url")
+
     args = parser.parse_args()
     
-    main(args.restore)
+    main(args.restore, args.book, args.word)

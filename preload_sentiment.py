@@ -7,6 +7,7 @@ import shutil
 import random
 import numpy as np
 from nltk.tokenize import RegexpTokenizer
+import argparse
 import properties as pr
 
 prefix = "/home/alex/Documents/nlp/code/lstm_sentiment/data/aclImdb";
@@ -20,8 +21,12 @@ pos = "/pos"
 un = "/unsup"
 
 
+def check_word(w_, w):
+    if w_ == 'somewhere':
+        print(w)
+
+
 def get_vocabs(appended, vocabs, path):
-    txt = "";
     files = os.listdir(path)
     print("path %s: %i" % (path, len(files)))
     regex = RegexpTokenizer(r'\w+')
@@ -31,22 +36,15 @@ def get_vocabs(appended, vocabs, path):
             for sent in data:
                 words = sent.lower().split(' ')
                 for w in words:
-                    # if w in vocabs:
-                    #     txt += w + "\n"
-                    #     appended[w] = 1
-                    # else:
                     a = ''.join([c for c in w if c.isalnum()]);
                     # word is special case like :) :(
                     if not a:
-                        if w in vocabs:
-                            if w not in appended:
-                                txt += w + "\n"
+                        if w in vocabs and w not in appended:
                                 appended[w] = 1
                     else:
                         # word is normal case
                         if a in vocabs:
                             if a not in appended:
-                                txt += a + "\n"
                                 appended[a] = 1
                         else:
                             # word has special characters
@@ -55,29 +53,17 @@ def get_vocabs(appended, vocabs, path):
                                 w_ = '_'.join(words)
                                 if w_ in vocabs:
                                     if w_ not in appended:
-                                        txt += w_ + "\n"
                                         appended[w_] = 1
                                 else:
                                     for w_ in words:
                                         if w_ in vocabs:
                                             if w_ not in appended:
-                                                txt += w_ + "\n"
                                                 appended[w_] = 1
                                         else:
                                             w_ = ''.join([c for c in w_ if c.isalnum()]);
-                                            if w_ in vocabs:
-                                                txt += w_ + "\n"
+                                            if w_ in vocabs and w_ not in appended:
                                                 appended[w_] = 1
-                    # if w not in vocabs:
-                    #     a = ''.join([c for c in w if c.isalnum()]);
-                    #     if a:
-                    #         if a not in vocabs:
-                    #             txt += a + "\n"
-                    #             vocabs[a] = 1
-                    #     else:
-                    #         txt += w + "\n"
-                    #         vocabs[w] = 1
-    return txt;
+             
 
 
 def build_embedding():
@@ -136,44 +122,59 @@ def build_index(vocabs, path, tag=None):
 if __name__ == "__main__":
     test_p = prefix + test
     train_p = prefix + train
-    # txt = ""
-    # vocabs_ar = utils.load_file(vocabs_path, use_pickle=False)
-    # vocabs = dict()
-    # appended = dict()
-    # for x in vocabs_ar:
-    #     x = x.replace("\n", "")
-    #     vocabs[x] = 1
-    # # vocabs = OrderedDict(sorted(vocabs.items(), key=lambda t: t[0]))
-    # txt = get_vocabs(appended, vocabs, test_p + neg)
-    # txt += get_vocabs(appended, vocabs, test_p + pos)
-    # txt += get_vocabs(appended, vocabs, train_p + neg)
-    # txt += get_vocabs(appended, vocabs, train_p + pos)
-    # txt += get_vocabs(appended, vocabs, train_p + un)
-    # utils.save_file("vocabs.txt", txt, use_pickle=False)
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-t", "--task", type=int)
+    
+    args = parser.parse_args()
 
-    # build_embedding()
-    # vocabs = utils.load_file(vocabs_path, use_pickle=False);
-    # a = {}
-    # for e, w in enumerate(vocabs):
-    #     w = w.replace('\n', '')
-    #     a[w] = e
-    # utils.save_file(vocabs_pkl, a)
-
-    vocabs = utils.load_file(vocabs_pkl);
-    test = []
-    n = build_index(vocabs, test_p + neg)
-    p = build_index(vocabs, test_p + pos)
-    test.append(n)
-    test.append(p)
-    train = []
-    n = build_index(vocabs, train_p + neg)
-    p = build_index(vocabs, train_p + pos)
-    train.append(n)
-    train.append(p)
-    un_s = build_index(vocabs, train_p + un)
-    fo = {
-        'test' : test,
-        'train' : train,
-        'un' : un_s
-    }
-    utils.save_file(pr.dataset_imdb, fo)
+    if not args.task:
+        txt = ""
+        vocabs_ar = utils.load_file(vocabs_path, use_pickle=False)
+        vocabs = dict()
+        appended = dict()
+        for x in vocabs_ar:
+            x = x.replace("\n", "")
+            vocabs[x] = 1
+        # vocabs = OrderedDict(sorted(vocabs.items(), key=lambda t: t[0]))
+        get_vocabs(appended, vocabs, test_p + neg)
+        get_vocabs(appended, vocabs, test_p + pos)
+        get_vocabs(appended, vocabs, train_p + neg)
+        get_vocabs(appended, vocabs, train_p + pos)
+        get_vocabs(appended, vocabs, train_p + un)
+        for x, y in appended.iteritems():
+            txt += "%s\n" % x
+        utils.save_file("sentiment/vocabs.txt", txt, use_pickle=False)
+        
+    elif args.task == 1:
+        build_embedding()
+        vocabs = utils.load_file(vocabs_path, use_pickle=False);
+        a = {}
+        for e, w in enumerate(vocabs):
+            w = w.replace('\n', '')
+            if w in a:
+                print(e, w)
+            a[w] = e
+        print(len(vocabs))
+        print(len(a))
+        utils.save_file(vocabs_pkl, a)
+    else:
+        vocabs = utils.load_file(vocabs_pkl);
+        print(len(vocabs))
+        test = []
+        n = build_index(vocabs, test_p + neg)
+        p = build_index(vocabs, test_p + pos)
+        test.append(n)
+        test.append(p)
+        train = []
+        n = build_index(vocabs, train_p + neg)
+        p = build_index(vocabs, train_p + pos)
+        train.append(n)
+        train.append(p)
+        un_s = build_index(vocabs, train_p + un)
+        fo = {
+            'test' : test,
+            'train' : train,
+            'un' : un_s
+        }
+        utils.save_file(pr.dataset_imdb, fo)
