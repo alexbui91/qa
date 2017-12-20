@@ -55,8 +55,8 @@ class ModelSentiment():
         self.pred_placeholder = tf.placeholder(
             tf.int32, shape=(p.batch_size,))
         # place holder for start vs end position
-
         self.dropout_placeholder = tf.placeholder(tf.float32)
+        self.iteration = tf.placeholder(tf.int32)
 
     def inference(self):
         """Performs inference on the DMN model"""
@@ -149,7 +149,8 @@ class ModelSentiment():
 
     def add_training_op(self, loss):
         """Calculate and apply gradients"""
-        opt = tf.train.AdamOptimizer(learning_rate=p.lr)
+        lr = tf.train.exponential_decay(learning_rate=p.lr, global_step=self.iteration, decay_steps=p.decay_steps, decay_rate=p.decay_rate)
+        opt = tf.train.AdamOptimizer(learning_rate=lr)
         gvs = opt.compute_gradients(loss)
 
         train_op = opt.apply_gradients(gvs)
@@ -180,7 +181,8 @@ class ModelSentiment():
             feed = {self.input_placeholder: ct[index],
                     self.input_len_placeholder: ct_l[index],
                     self.pred_placeholder: pr[index],
-                    self.dropout_placeholder: dp}
+                    self.dropout_placeholder: dp,
+                    self.iteration: num_epoch}
             
             pred_labels = pr[step * p.batch_size:(step + 1) * p.batch_size]
             
@@ -204,4 +206,4 @@ class ModelSentiment():
         avg_acc = 0.
         if total_steps:
             avg_acc = accuracy / float(total_steps)
-        return np.mean(total_loss), avg_acc
+        return np.sum(total_loss), avg_acc

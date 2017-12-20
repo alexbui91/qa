@@ -52,7 +52,7 @@ def get_data(vocabs=""):
     return word_embedding, training_data, validation_data
 
 
-def main(book, word, restore=0, vocabs=""):
+def main(book, word, restore=0, vocabs="", prefix=""):
     # init word embedding
     # create model
     tconfig = tf.ConfigProto(allow_soft_placement=True)
@@ -100,15 +100,15 @@ def main(book, word, restore=0, vocabs=""):
                     print('Saving weights')
                     best_code_words = code_words
                     best_code_words_valid = code_words_valid
-                    saver.save(session, 'weights/compression.weights')
+                    saver.save(session, 'weights/%s_compression.weights' % prefix)
             if (epoch - best_epoch) >= p.early_stopping:
                 break
             print('Total time: {}'.format(time.time() - start))
         if best_code_words and best_code_words_valid:
             code_words_str = stringify_code_words(code_words)
             code_words_valid_str = stringify_code_words(code_words_valid)
-            utils.save_file("weights/code_words_training.txt", code_words_str, use_pickle=False)
-            utils.save_file("weights/code_words_valid.txt", code_words_valid_str, use_pickle=False)
+            utils.save_file("weights/%s_code_words_training.txt" % prefix, code_words_str, use_pickle=False)
+            utils.save_file("weights/%s_code_words_valid.txt" % prefix, code_words_valid_str, use_pickle=False)
 
 
 if __name__ == "__main__":
@@ -123,8 +123,10 @@ if __name__ == "__main__":
                         help="book size", type=int, default=64)
     parser.add_argument("-v", "--vocabs",
                         help="link vocabs to train")
+    parser.add_argument("-p", "--prefix",
+                        help="prefix to compression file", default="")
     args = parser.parse_args()
     if args.train_data:
         _, _, _ = get_data(args.vocabs)
     else:
-        main(args.book, args.word, args.restore, args.vocabs)
+        main(args.book, args.word, args.restore, args.vocabs, args.prefix)
