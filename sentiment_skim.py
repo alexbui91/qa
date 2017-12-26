@@ -149,7 +149,7 @@ class ModelSentiment():
 
     def add_training_op(self, loss):
         """Calculate and apply gradients"""
-        lr = tf.train.exponential_decay(learning_rate=p.lr, global_step=self.iteration, decay_steps=p.decay_steps, decay_rate=p.decay_rate)
+        lr = tf.train.exponential_decay(learning_rate=p.lr, global_step=self.iteration, decay_steps=p.lr_depr, decay_rate=p.decay_rate)
         opt = tf.train.AdamOptimizer(learning_rate=lr)
         gvs = opt.compute_gradients(loss)
 

@@ -18,6 +18,7 @@ class Compression(object):
     def __init__(self, word_embedding=None, M=64, K=64, batch_size=128, embedding_size=50, learning_rate=0.001):
         self.M = M
         self.K = K
+        # print(self.M, self.K)
         self.hidden_layer_size = self.M * self.K // 2
         self.word_embedding = word_embedding
         self.batch_size = batch_size
@@ -108,7 +109,7 @@ class Compression(object):
     def run_epoch(self, session, data, num_epoch=0, train_writer=None):
         total_loss = 0
         total_steps = len(data) // self.batch_size
-        print(total_steps)
+        # print(total_steps)
         vocabs = []
         for step in xrange(total_steps):
             index = range(step * self.batch_size, (step + 1) * self.batch_size)

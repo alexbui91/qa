@@ -52,7 +52,8 @@ def get_data(vocabs=""):
     return word_embedding, training_data, validation_data
 
 
-def main(book, word, restore=0, vocabs="", prefix=""):
+def main(book, word, restore=0, vocabs="", prefix="", data=None):
+    print("Training %s" % prefix)
     # init word embedding
     # create model
     tconfig = tf.ConfigProto(allow_soft_placement=True)
@@ -60,7 +61,10 @@ def main(book, word, restore=0, vocabs="", prefix=""):
     # model.set_encoding()
     model.init_opts()
     # model.init_data_node()
-    word_embedding, training_data, validation_data = get_data(vocabs)
+    if data:
+        word_embedding, training_data, validation_data = data
+    else:
+        word_embedding, training_data, validation_data = get_data(vocabs)
     model.set_embedding(np.array(word_embedding))
     with tf.device('/%s' % p.device):
         print('==> initializing variables')
@@ -118,15 +122,24 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--train_data",
                         help="get trained words (default=false)", type=int)
     parser.add_argument("-b", "--book",
-                        help="book size", type=int, default=64)
+                        help="book size", type=int, default=0)
     parser.add_argument("-w", "--word",
-                        help="book size", type=int, default=64)
+                        help="book size", type=int, default=0)
     parser.add_argument("-v", "--vocabs",
                         help="link vocabs to train")
     parser.add_argument("-p", "--prefix",
                         help="prefix to compression file", default="")
     args = parser.parse_args()
+    
     if args.train_data:
         _, _, _ = get_data(args.vocabs)
+    elif not args.book or not args.word:
+        a = [8, 16, 32, 64]
+        word_embedding, training_data, validation_data = get_data(args.vocabs)
+        data = (word_embedding, training_data, validation_data)
+        for i in a:
+            for j in a:
+                tf.reset_default_graph();
+                main(i, j, args.restore, args.vocabs, '%ix%i' % (i, j), data)
     else:
         main(args.book, args.word, args.restore, args.vocabs, args.prefix)

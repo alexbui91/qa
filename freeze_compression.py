@@ -13,6 +13,9 @@ from tensorflow.python.tools import freeze_graph
 
 from embedding_compression import Compression
 
+import argparse
+import os
+
 import utils
 
 class FreezeGraphTest():
@@ -66,8 +69,8 @@ class FreezeGraphTest():
             #     output_node = sess.graph.get_tensor_by_name("one_hot")
             #     print
 
-    def get_trained(self, layer=""):
-        checkpoint_path = "weights/compression.weights"
+    def get_trained(self, layer="", url="", prefix=""):
+        checkpoint_path = "%s/%s_compression.weights.meta" % (url, prefix)
         model = Compression()
         model.init_opts()
         tconfig = tf.ConfigProto(allow_soft_placement=True)
@@ -75,8 +78,9 @@ class FreezeGraphTest():
         with tf.Session(config=tconfig) as sess:
             init = tf.global_variables_initializer()
             sess.run(init)
-            saver = tf.train.import_meta_graph('weights/compression.weights.meta')
-            saver.restore(sess, tf.train.latest_checkpoint('weights'))
+            saver = tf.train.import_meta_graph(checkpoint_path)
+            # saver.restore(sess, tf.train.latest_checkpoint(url))
+            saver.restore(sess, checkpoint_path)
             val = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, layer)
             print(tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES))
             if val:
@@ -85,7 +89,33 @@ class FreezeGraphTest():
 
 if __name__ == "__main__":
     # test.main()
+    parse = argparse.ArgumentParser()
+    parse.add_argument("-u", '--url')
+    parse.add_argument("-u2", '--url2')
+    parse.add_argument("-p", '--prefix')
+    parse.add_argument("-f", '--folder', type=int, default=0)
+
+
+    args = parse.parse_args()
+
     fc = FreezeGraphTest()
     # fc._testFreezeGraph()
-    code_book = fc.get_trained("code_book")
-    utils.save_file("weights/code_book.pkl", code_book)
+    if args.folder:
+        files = os.listdir(args.url)
+        name = []
+        for f in files:
+            if 'compression.weights' in f:
+                a = f.split('.')[0]
+                a = a.split('_')[0]
+                if a not in name:
+                    name.append(a)
+        path = args.url
+        if args.url2:
+            path = args.url2
+        for n in name:
+            code_book = fc.get_trained("code_book", args.url, n)
+            utils.save_file("%s/%s_code_book.pkl" % (path, n), code_book)
+            tf.reset_default_graph()
+    else:
+        code_book = fc.get_trained("code_book", args.url, args.prefix)
+        utils.save_file("%s/%s_code_book.pkl" % (args.url, args.prefix), code_book)
