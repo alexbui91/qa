@@ -10,6 +10,7 @@ from tensorflow.python.framework import graph_io
 from tensorflow.python.framework import importer
 from tensorflow.python.framework import ops
 from tensorflow.python.tools import freeze_graph
+import numpy as np
 
 from embedding_compression import Compression
 
@@ -72,7 +73,8 @@ class FreezeGraphTest():
     def get_trained(self, layer="", url="", prefix=""):
         checkpoint_meta = "%s/%s_compression.weights.meta" % (url, prefix)
         checkpoint = "%s/%s_compression.weights" % (url, prefix)
-        model = Compression()
+        p = prefix.split('x');
+        model = Compression(M=int(p[0]), K=int(p[1]))
         model.init_opts()
         tconfig = tf.ConfigProto(allow_soft_placement=True)
 
@@ -115,6 +117,7 @@ if __name__ == "__main__":
             path = args.url2
         for n in name:
             code_book = fc.get_trained("code_book", args.url, n)
+            print(np.shape(code_book))
             utils.save_file("%s/%s_code_book.pkl" % (path, n), code_book)
             tf.reset_default_graph()
     else:

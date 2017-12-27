@@ -191,9 +191,12 @@ if __name__ == "__main__":
     
     parser.add_argument("-b", "--book", help="code book url")
     parser.add_argument("-w", "--word", help="code words url")
+    parser.add_argument("-bs", "--book_size", type=int, default=64)
+    parser.add_argument("-ws", "--word_size", type=int, default=64)
+
     parser.add_argument("-p", "--prefix", help="prefix to save weighted files")
 
-
     args = parser.parse_args()
-    
+    p.book_size = args.book_size
+    p.code_size = args.word_size
     main(args.restore, args.book, args.word, args.prefix)
