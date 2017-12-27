@@ -160,9 +160,8 @@ def main(restore=False, b="", w="", prefix=""):
                 p.lr /= p.anneal_by
                 print('annealed lr to %f' % p.lr)
             prev_epoch_loss = train_loss
-
             # validation
-            if epoch % p.validation_checkpoint:
+            if epoch > p.skip_validation and (epoch % p.validation_checkpoint) == 0:
                 valid_loss, valid_accuracy = model.run_epoch(session, model.valid)
                 print('Validation loss: {}'.format(valid_loss))
                 print('Validation accuracy: {}'.format(valid_accuracy))

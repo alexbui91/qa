@@ -18,7 +18,6 @@ class Compression(object):
     def __init__(self, word_embedding=None, M=64, K=64, batch_size=128, embedding_size=50, learning_rate=0.001):
         self.M = M
         self.K = K
-        print("a", self.M, self.K)
         # print(self.M, self.K)
         self.hidden_layer_size = self.M * self.K // 2
         self.word_embedding = word_embedding
