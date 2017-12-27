@@ -175,6 +175,7 @@ class ModelSentiment():
 
     def shuffle_batch(self, data):
         ct, ct_l, pr = data
+        total_steps = len(ct) // p.batch_size
         context, length, pred = tf.train.shuffle_batch(
                                 [ct, ct_l, pr], 
                                 p.batch_size, 
@@ -186,7 +187,7 @@ class ModelSentiment():
     # prepare data for multiple gpu
     def prepare_gpu_data(self):
         self.batch_queue = self.shuffle_batch(self.train)
-        self.batch_queue_valid = self.shuffle_batch(self.train, valid)
+        self.batch_queue_valid = self.shuffle_batch(self.valid)
         self.input_placeholder, self.inputs_len, self.pred_placeholder = [], [], []
         for i in xrange(self.num_gpus):
             ip, il, pl = self.add_placeholders();
@@ -228,7 +229,7 @@ class ModelSentiment():
 
         if not self.use_multiple_gpu:
             ct, ct_l, pr = data
-            r = np.random.permutation(len(data[0]))
+            r = np.random.permutation(len(ct))
             ct, ct_l, pr = np.asarray(ct, dtype=np.float32), np.asarray(ct_l, dtype=np.float32), np.asarray(pr, dtype=np.float32)
             ct, ct_l, pr = ct[r], ct_l[r], pr[r]
             for step in range(total_steps):
