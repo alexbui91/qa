@@ -70,7 +70,8 @@ class FreezeGraphTest():
             #     print
 
     def get_trained(self, layer="", url="", prefix=""):
-        checkpoint_path = "%s/%s_compression.weights.meta" % (url, prefix)
+        checkpoint_meta = "%s/%s_compression.weights.meta" % (url, prefix)
+        checkpoint = "%s/%s_compression.weights" % (url, prefix)
         model = Compression()
         model.init_opts()
         tconfig = tf.ConfigProto(allow_soft_placement=True)
@@ -78,11 +79,11 @@ class FreezeGraphTest():
         with tf.Session(config=tconfig) as sess:
             init = tf.global_variables_initializer()
             sess.run(init)
-            saver = tf.train.import_meta_graph(checkpoint_path)
+            saver = tf.train.import_meta_graph(checkpoint_meta)
             # saver.restore(sess, tf.train.latest_checkpoint(url))
-            saver.restore(sess, checkpoint_path)
+            saver.restore(sess, checkpoint)
             val = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, layer)
-            print(tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES))
+            # print(tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES))
             if val:
                 val = val[0]
                 return val.eval()

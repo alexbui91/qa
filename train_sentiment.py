@@ -62,7 +62,9 @@ def load_code_words(url):
     return book
 
 
-def main(restore=False, b="", w=""):
+def main(restore=False, b="", w="", prefix=""):
+    if prefix:
+        prefix = prefix +  "_";
     word_embedding = None
     # if u.check_file(p.sentiment_embedding_path):
     #     word_embedding = utils.load_file(p.sentiment_embedding_path)
@@ -138,10 +140,10 @@ def main(restore=False, b="", w=""):
         prev_epoch_loss = float('inf')
         best_val_loss = float('inf')
         best_val_accuracy = 0.0
-
+        
         if restore:
             print('==> restoring weights')
-            saver.restore(session, 'weights/sentiment.weights')
+            saver.restore(session, 'weights/%ssentiment.weights' % prefix)
 
         print('==> starting training')
         for epoch in xrange(p.total_iteration):
@@ -171,7 +173,7 @@ def main(restore=False, b="", w=""):
                     if best_val_loss < best_overall_val_loss:
                         print('Saving weights')
                         best_overall_val_loss = best_val_loss
-                        saver.save(session, 'weights/sentiment.weights')
+                        saver.save(session, 'weights/%ssentiment.weights' % prefix)
             
                 if best_val_accuracy < valid_accuracy:
                     best_val_accuracy = valid_accuracy
@@ -189,7 +191,9 @@ if __name__ == "__main__":
     
     parser.add_argument("-b", "--book", help="code book url")
     parser.add_argument("-w", "--word", help="code words url")
+    parser.add_argument("-p", "--prefix", help="prefix to save weighted files")
+
 
     args = parser.parse_args()
     
-    main(args.restore, args.book, args.word)
+    main(args.restore, args.book, args.word, args.prefix)
