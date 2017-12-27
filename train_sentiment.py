@@ -101,9 +101,8 @@ def main(restore=False, b="", w="", prefix=""):
         raise ValueError("%s is not existed" % p.sentiment_embedding_path)
     
         # config.strong_supervision = True
-    model = ModelSentiment(np.array(word_embedding), p.max_imdb_sent, using_compression, book, words)
-    model.init_ops()
-
+    model = ModelSentiment(np.array(word_embedding), p.max_imdb_sent, using_compression, book, words, num_gpus=p.num_gpus, use_multiple_gpu=True)
+    
     data = utils.load_file(p.dataset_imdb)
     train = data['train']
     test = data['test']
@@ -115,17 +114,20 @@ def main(restore=False, b="", w="", prefix=""):
     
     model.set_data(train, dev)
 
-     # tf.reset_default_graph()
-    print('Start training sentiment')
     # model.init_data_node()
-    best_overall_val_loss = float('inf')
-    # create model
-    tconfig = tf.ConfigProto(allow_soft_placement=True)
-
-    with tf.device('/%s' % p.device):
-        print('==> initializing variables')
+    if not p.use_multiple_gpu:
+        with tf.device('/%s' % p.device):
+            _,_,_ = model.init_ops()
+            print('==> initializing variables')
+            init = tf.global_variables_initializer()
+            saver = tf.train.Saver()
+    else:
         init = tf.global_variables_initializer()
         saver = tf.train.Saver()
+        # model.setup_multiple_gpu()
+        # model.merge()
+    
+    tconfig = tf.ConfigProto(allow_soft_placement=True)
 
     with tf.Session(config=tconfig) as session:
 
@@ -140,11 +142,12 @@ def main(restore=False, b="", w="", prefix=""):
         prev_epoch_loss = float('inf')
         best_val_loss = float('inf')
         best_val_accuracy = 0.0
-        
+        best_overall_val_loss = float('inf')
+
         if restore:
             print('==> restoring weights')
             saver.restore(session, 'weights/%ssentiment.weights' % prefix)
-
+        
         print('==> starting training')
         for epoch in xrange(p.total_iteration):
             print('Epoch {}'.format(epoch))
@@ -180,7 +183,7 @@ def main(restore=False, b="", w="", prefix=""):
             if (epoch - best_val_epoch) > p.early_stopping:
                 break
             print('Total time: {}'.format(time.time() - start))
-
+        utils.save_file('%saccuracy.txt' % prefix, best_overall_val_loss)
         print('Best validation accuracy:', best_val_accuracy)
 
 
