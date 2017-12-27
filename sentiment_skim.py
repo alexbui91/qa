@@ -173,18 +173,51 @@ class ModelSentiment():
         pred = tf.argmax(pred, 1)
         return pred
 
-    def debug(step, summary, train_writer, total_steps, total_loss, pred, pred_labels):
-        if train_writer is not None:
-            train_writer.add_summary(
-                summary, num_epoch * total_steps + step)
-        accuracy = (np.sum(pred == pred_labels)) / p.batch_size
-        if verbose and step % verbose == 0:
-            sys.stdout.write('\r{} / {} : loss = {}'.format(
-                step, total_steps, total_loss))
-            sys.stdout.flush()
-        return accuracy
+    def shuffle_batch(self, data):
+        ct, ct_l, pr = data
+        context, length, pred = tf.train.shuffle_batch(
+                                [ct, ct_l, pr], 
+                                p.batch_size, 
+                                enqueue_many=True, 
+                                num_threads=16,
+                                capacity=total_steps)
+        return tf.contrib.slim.prefetch_queue.prefetch_queue([context, length, pred], capacity =  2 * self.num_gpus)
 
-    def run_epoch(self, session, data, num_epoch=0, train_writer=None, train_op=None, verbose=2, train=False):
+    # prepare data for multiple gpu
+    def prepare_gpu_data(self):
+        self.batch_queue = self.shuffle_batch(self.train)
+        self.batch_queue_valid = self.shuffle_batch(self.train, valid)
+        self.input_placeholder, self.inputs_len, self.pred_placeholder = [], [], []
+        for i in xrange(self.num_gpus):
+            ip, il, pl = self.add_placeholders();
+            self.input_placeholder.append(ip)
+            self.input_len_placeholder.append(il),
+            self.pred_placeholder.append(pl)
+    
+    def debug(self, step, total_steps, total_loss):
+        sys.stdout.write('\r{} / {} : loss = {}'.format(
+            step, total_steps, total_loss))
+        sys.stdout.flush()
+
+    # prepare machine to run multiple gpu
+    def setup_multiple_gpu(self):
+        with tf.variable(tf.get_variable_scope()):
+            for i in xrange(self.num_gpus):
+                with tf.device('/gpu:%i' % i):
+                    ip = self.input_placeholder[i]
+                    il = self.input_len_placeholder[i] 
+                    pl = self.pred_placeholder[i]
+                    loss, pred = self.init_ops(ip, il, pl)
+                    feed = {
+                        input_placeholder : context_batch,
+                        input_len_placeholder: context_lens,
+                        self.dropout_placeholder: dp,
+                        pred_placeholder: pred_labels
+                    }
+                    tf.get_variable_scope().reuse_variables()
+        summary = tf.summary.merge_all() 
+
+    def run_epoch(self, session, data, num_epoch=0, train_writer=None, train_op=None):
         dp = p.dropout
         if train_op is None:
             train_op = tf.no_op()
@@ -193,39 +226,11 @@ class ModelSentiment():
         total_loss = 0
         accuracy = 0
 
-        ct, ct_l, pr = data
         if not self.use_multiple_gpu:
+            ct, ct_l, pr = data
             r = np.random.permutation(len(data[0]))
             ct, ct_l, pr = np.asarray(ct, dtype=np.float32), np.asarray(ct_l, dtype=np.float32), np.asarray(pr, dtype=np.float32)
             ct, ct_l, pr = ct[r], ct_l[r], pr[r]
-        else:
-            context, length, pred = tf.train.shuffle_batch(
-                                    [ct, ct_l, pr], 
-                                    p.batch_size, 
-                                    enqueue_many=True, 
-                                    num_threads=16,
-                                    capacity=total_steps)
-            batch_queue = tf.contrib.slim.prefetch_queue.prefetch_queue([context, length, pred], capacity =  2 * self.num_gpus)
-        if self.use_multiple_gpu:
-            with tf.variable_scope(tf.get_variable_scope()):
-                for i in xrange(self.num_gpus):
-                    with tf.device('/gpu:%i' % i):
-                        context_batch, context_lens, pred_labels = batch_queue.dequeue()
-                        input_placeholder, input_len_placeholder, pred_placeholder = self.add_placeholders();
-                        loss, pred, merge = self.init_ops(input_placeholder, input_len_placeholder, pred_placeholder)
-                        feed = {
-                            input_placeholder : context_batch,
-                            input_len_placeholder: context_lens,
-                            self.dropout_placeholder: dp,
-                            pred_placeholder: pred_labels
-                        }
-                        tf.get_variable_scope().reuse_variables()
-                summary = tf.summary.merge_all() 
-                loss, acc, _ = session.run([loss, pred, train_op], feed)
-                total_loss += loss
-                accuracy += acc
-                debug(step, summary, train_writer, total_steps, total_loss, pred, pred_labels)
-        else:
             for step in range(total_steps):
                 index = range(step * p.batch_size,
                             (step + 1) * p.batch_size)
@@ -239,10 +244,22 @@ class ModelSentiment():
                 loss, pred, summary, _ = session.run(
                     [self.calculate_loss, self.pred, self.merged, train_op], feed_dict=feed)
                 total_loss += loss
-                debug(step, train_writer, total_steps, total_loss, pred, pred_labels)
+                if train_writer is not None:
+                    train_writer.add_summary(
+                        summary, num_epoch * total_steps + step)
+                
+                accuracy += (np.sum(pred == pred_labels)) / p.batch_size
+                debug(step, total_steps, total_loss)
+        else:
+            if train_op:
+                context_batch, context_lens, pred_labels = self.batch_queue.dequeue()
+            else:
+                context_batch, context_lens, pred_labels = self.batch_queue_valid.dequeue()
+            loss, acc, _ = session.run([loss, pred, train_op], feed)
+            total_loss += loss
+            accuracy += acc
 
-        if verbose:
-            sys.stdout.write('\r')
+        sys.stdout.write('\r')
         avg_acc = 0.
         if total_steps:
             avg_acc = accuracy / float(total_steps)

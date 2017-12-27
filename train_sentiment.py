@@ -123,9 +123,9 @@ def main(restore=False, b="", w="", prefix=""):
             saver = tf.train.Saver()
     else:
         init = tf.global_variables_initializer()
+        model.prepare_gpu_data()
+        model.setup_multiple_gpu()
         saver = tf.train.Saver()
-        # model.setup_multiple_gpu()
-        # model.merge()
     
     tconfig = tf.ConfigProto(allow_soft_placement=True)
 
