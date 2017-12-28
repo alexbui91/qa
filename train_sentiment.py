@@ -111,7 +111,8 @@ def main(restore=False, b="", w="", prefix=""):
     test, test_l, pre_t = prepare_data(test)
     dev_l = int(len(test) * 0.2)
     dev = (test[:dev_l], test_l[:dev_l], pre_t[:dev_l])
-    test = (test[dev_l:], test_l[dev_l:], pre_t[dev_l:])
+    # test = (test[dev_l:], test_l[dev_l:], pre_t[dev_l:])
+    test = (test, test_l, pre_t)
     
     model.set_data(train, dev)
 
@@ -180,8 +181,13 @@ def main(restore=False, b="", w="", prefix=""):
             if (epoch - best_val_epoch) > p.early_stopping:
                 break
             print('Total time: {}'.format(time.time() - start))
-
         print('Best validation accuracy:', best_val_accuracy)
+        print('=> Running test')
+        _, test_accuracy = model.run_epoch(session, test)
+        test_accuracy = test_accuracy * 100
+        print('Test accuracy: %.5f' % test_accuracy)
+        tmp = "Best validation accuracy: %.5f\nTest accuracy: %.5f" % (best_val_accuracy, test_accuracy)
+        utils.save_file("%saccuracy.txt", tmp)
 
 
 if __name__ == "__main__":
@@ -198,4 +204,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     p.book_size = args.book_size
     p.code_size = args.word_size
+
+    if not args.prefix:
+        args.prefix = "%sx%s" % (args.book_size, args.word_size)
     main(args.restore, args.book, args.word, args.prefix)
