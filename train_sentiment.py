@@ -101,7 +101,7 @@ def main(restore=False, b="", w="", prefix=""):
         raise ValueError("%s is not existed" % p.sentiment_embedding_path)
     
         # config.strong_supervision = True
-    model = ModelSentiment(np.array(word_embedding), p.max_imdb_sent, using_compression, book, words, num_gpus=p.num_gpus, use_multiple_gpu=True)
+    model = ModelSentiment(np.array(word_embedding), p.max_imdb_sent, using_compression, book, words)
     
     data = utils.load_file(p.dataset_imdb)
     train = data['train']
