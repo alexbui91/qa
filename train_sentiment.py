@@ -178,14 +178,15 @@ def main(restore=False, b="", w="", prefix=""):
             if (epoch - best_val_epoch) > p.early_stopping:
                 break
             print('Total time: {}'.format(time.time() - start))
-        utils.save_file('%saccuracy.txt' % prefix, best_overall_val_loss)
         print('Best validation accuracy:', best_val_accuracy)
         print('=> Running test')
+        print('==> Restoring best weights')
+        saver.restore(session, 'weights/%ssentiment.weights' % prefix)
         _, test_accuracy = model.run_epoch(session, test)
         test_accuracy = test_accuracy * 100
         print('Test accuracy: %.5f' % test_accuracy)
-        tmp = "Best validation accuracy: %.5f\nTest accuracy: %.5f" % (best_val_accuracy, test_accuracy)
-        utils.save_file("%saccuracy.txt", tmp)
+        tmp = "Best validation accuracy: %.5f \n Test accuracy: %.5f" % (best_val_accuracy, test_accuracy)
+        utils.save_file("%saccuracy.txt" % prefix, tmp, False)
 
 
 if __name__ == "__main__":
