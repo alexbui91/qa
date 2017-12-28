@@ -116,16 +116,10 @@ def main(restore=False, b="", w="", prefix=""):
     model.set_data(train, dev)
 
     # model.init_data_node()
-    if not p.use_multiple_gpu:
-        with tf.device('/%s' % p.device):
-            _,_,_ = model.init_ops()
-            print('==> initializing variables')
-            init = tf.global_variables_initializer()
-            saver = tf.train.Saver()
-    else:
+    with tf.device('/%s' % p.device):
+        model.init_ops()
+        print('==> initializing variables')
         init = tf.global_variables_initializer()
-        model.prepare_gpu_data()
-        model.setup_multiple_gpu()
         saver = tf.train.Saver()
     
     tconfig = tf.ConfigProto(allow_soft_placement=True)
