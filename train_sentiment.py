@@ -193,7 +193,7 @@ def main(restore=False, b="", w="", prefix=""):
         print('Test accuracy: %.5f' % test_accuracy)
         tmp = "Best validation accuracy: %.5f \n Test accuracy: %.5f" % (best_val_accuracy, test_accuracy)
         utils.save_file("%saccuracy.txt" % prefix, tmp, False)
-        utils.save_file("logs/%slosses.txt", {"train_loss": train_losses, "train_acc": train_accuracies, "valid_loss": val_losses, "valid_acc" : val_acces})
+        utils.save_file("logs/%slosses.pkl", {"train_loss": train_losses, "train_acc": train_accuracies, "valid_loss": val_losses, "valid_acc" : val_acces})
 
 
 if __name__ == "__main__":
