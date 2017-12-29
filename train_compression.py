@@ -52,12 +52,12 @@ def get_data(vocabs=""):
     return word_embedding, training_data, validation_data
 
 
-def main(book, word, restore=0, vocabs="", prefix="", data=None):
+def main(book, word, restore=0, vocabs="", prefix="", decay=False, data=None):
     print("Training %s" % prefix)
     # init word embedding
     # create model
     tconfig = tf.ConfigProto(allow_soft_placement=True)
-    model = Compression(M=book, K=word)
+    model = Compression(M=book, K=word, use_decay=decay)
     # model.set_encoding()
     model.init_opts()
     # model.init_data_node()
@@ -129,6 +129,7 @@ if __name__ == "__main__":
                         help="link vocabs to train")
     parser.add_argument("-p", "--prefix",
                         help="prefix to compression file", default="")
+    parser.add_argument("-d", "--decay", type=int, default=0)
     args = parser.parse_args()
     
     if args.train_data:
@@ -140,6 +141,6 @@ if __name__ == "__main__":
         for i in a:
             for j in a:
                 tf.reset_default_graph();
-                main(i, j, args.restore, args.vocabs, '%ix%i' % (i, j), data)
+                main(i, j, args.restore, args.vocabs, '%ix%i' % (i, j), data, args.decay)
     else:
-        main(args.book, args.word, args.restore, args.vocabs, args.prefix)
+        main(args.book, args.word, args.restore, args.vocabs, args.prefix, args.decay)

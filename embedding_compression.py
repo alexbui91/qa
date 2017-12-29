@@ -15,7 +15,7 @@ import tensorflow as tf
 import properties as p
 
 class Compression(object):
-    def __init__(self, word_embedding=None, M=64, K=64, batch_size=128, embedding_size=50, learning_rate=0.001):
+    def __init__(self, word_embedding=None, M=64, K=64, batch_size=128, embedding_size=50, learning_rate=0.001, use_decay=True):
         self.M = M
         self.K = K
         # print(self.M, self.K)
@@ -24,6 +24,7 @@ class Compression(object):
         self.batch_size = batch_size
         self.embedding_size = embedding_size
         self.learning_rate = learning_rate
+        self.use_decay = use_decay
     
     def set_embedding(self, word_embedding):
         self.word_embedding = word_embedding
@@ -96,7 +97,10 @@ class Compression(object):
     # using adam gradient
     def add_training_op(self, loss):
         """Calculate and apply gradients"""
-        lr = tf.train.exponential_decay(self.learning_rate, global_step=self.iteration, decay_steps=p.lr_depr, decay_rate=p.decay_rate)
+        if self.use_decay:
+            lr = tf.train.exponential_decay(self.learning_rate, global_step=self.iteration, decay_steps=p.lr_depr, decay_rate=p.decay_rate)
+        else:
+            lr = self.learning_rate
         opt = tf.train.AdamOptimizer(learning_rate=lr)
         gvs = opt.compute_gradients(loss)
         train_op = opt.apply_gradients(gvs)
