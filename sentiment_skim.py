@@ -15,12 +15,15 @@ import properties as p
 class ModelSentiment():
 
 
-    def __init__(self, word_embedding=None, max_input_len=None, using_compression=False, book=None, words=None):
+    def __init__(self, word_embedding=None, max_input_len=None, using_compression=False, book=None, words=None, we_trainable=False, learning_rate = 0.001, lr_decayable=True):
         self.word_embedding = word_embedding
+        self.we_trainable = we_trainable
         self.max_input_len = max_input_len
         self.using_compression = using_compression
         self.book = book
         self.words = words
+        self.learning_rate = learning_rate
+        self.lr_decayable = lr_decayable
 
     def set_data(self, train, valid):
         self.train = train
@@ -65,7 +68,7 @@ class ModelSentiment():
         embeddings = None
         if not self.using_compression:
             embeddings = tf.Variable(
-                self.word_embedding.astype(np.float32), name="Embedding")
+                self.word_embedding.astype(np.float32), name="Embedding", trainable=self.we_trainable)
        
         with tf.variable_scope("input", initializer=tf.contrib.layers.xavier_initializer()):
             print('==> get input representation')
@@ -149,7 +152,10 @@ class ModelSentiment():
 
     def add_training_op(self, loss):
         """Calculate and apply gradients"""
-        lr = tf.train.exponential_decay(learning_rate=p.lr, global_step=self.iteration, decay_steps=p.lr_depr, decay_rate=p.decay_rate)
+        if self.lr_decayable:
+            lr = tf.train.exponential_decay(learning_rate=p.lr, global_step=self.iteration, decay_steps=p.lr_depr, decay_rate=p.decay_rate)
+        else:
+            lr = 
         opt = tf.train.AdamOptimizer(learning_rate=lr)
         gvs = opt.compute_gradients(loss)
 
