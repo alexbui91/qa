@@ -40,16 +40,18 @@ class Compression(object):
             #random A
             # hidden layer
             # embeddings = tf.Variable(self.word_embedding.astype(np.float32), name="Embedding")
+            # from B x H of input vectors => B x (M*K/2) S = M*K/2
             h_ = tf.layers.dense(self.input_placeholder,
                                 self.hidden_layer_size,
                                 # =tf.tanh,
                                 name="hidden_layer")
+            # duplicate h_ M times => B x M x S
             h_cube = tf.reshape(tf.tile(h_, [1, self.M]), [self.batch_size, self.M, self.hidden_layer_size])
             # alpha
-            alp_value = tf.layers.dense(h_cube,
+            alp_ = tf.layers.dense(h_cube,
                                         self.K,
                                         activation=None, name="alpha_plus")
-            alp_ = tf.nn.softplus(alp_value, name="alpha_softplus")
+            alp_ = tf.nn.softplus(alp_, name="alpha_softplus")
             # init noise term
             G = -tf.log(-tf.log(tf.random_uniform([self.batch_size, self.M, self.K], 0, 1, dtype=tf.float32)))
             alp_log = tf.log(alp_) - G
@@ -57,12 +59,14 @@ class Compression(object):
                 alp_log /= p.softmax_temperature
             # one-hot => argmax to get c
             # need to extract this layer to Cw 
-            # d_ B x M x K => M x B x K
+            # d_ B x M x K 
             d_ = tf.nn.softmax(alp_log, name="one_hot")
             self.code_words = tf.argmax(d_, axis=2)
-            # reconstruction embedding
-            # need to extract weight of this layer -> code book 
-            # code_book = M x K x H
+            # # from M x B => M x B x K
+            # d_ = tf.one_hot(self.code_words, depth=self.K, axis=-1)
+        # reconstruction embedding
+        # need to extract weight of this layer -> code book 
+        # code_book = M x K x H
         code_book = tf.Variable(tf.random_uniform([self.M, self.K, self.embedding_size], -rg, rg, dtype=tf.float32), name="code_book", trainable=True)
         d_dense = tf.matmul(tf.transpose(d_, perm=[1,0,2]), code_book)
         # d_dense = tf.layers.dense(d_, self.embedding_size, =None, name="code_book_matrix")
@@ -73,7 +77,9 @@ class Compression(object):
         # using cosin distance
         # loss = tf.losses.cosine_distance(labels=self.input_placeholder, predictions=target)
         # using vector distance
-        loss = tf.reduce_mean(tf.reduce_sum(tf.square(tf.subtract(target, self.input_placeholder)), reduction_indices=1))
+        # loss = tf.reduce_mean(tf.reduce_sum(tf.square(tf.subtract(target, self.input_placeholder)), reduction_indices=1))
+        loss = tf.losses.mean_squared_error(labels=self.input_placeholder, predictions=target)
+        # loss = tf.losses.cosine_distance(labels=self.input_placeholder, predictions=target, dim=1)
         # for v in tf.trainable_variables():
         #     if 'bias' not in v.name.lower():
         #         loss += p.l2 * tf.nn.l2_loss(v)

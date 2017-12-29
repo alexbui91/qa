@@ -108,8 +108,9 @@ class ModelSentiment():
             # from code words => build one hot
             # B x L x M: batchsize x length_sentence
             d = tf.nn.embedding_lookup(w_embedding, self.input_placeholder)
-            # => B x L x M x K
+            # d_ is flatten to make one hot vector then reshape to cube later
             d_ = tf.reshape(d, [-1])
+            # => B x L x M x K
             d_ = tf.one_hot(d_, depth=p.code_size, axis=-1)
             d_ = tf.reshape(d_, [p.batch_size * self.max_input_len, p.book_size, p.code_size]);
             #  => M x B * L x K => B * L x K

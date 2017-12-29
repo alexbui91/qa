@@ -214,3 +214,4 @@ if __name__ == "__main__":
     if not args.prefix:
         args.prefix = "%sx%s" % (args.book_size, args.word_size)
     main(args.restore, args.book, args.word, args.prefix)
+    

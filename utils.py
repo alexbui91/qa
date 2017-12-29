@@ -1,6 +1,7 @@
 import properties as p
 import pickle 
 import os.path as path
+import os
 import codecs
 
 
