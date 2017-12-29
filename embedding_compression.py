@@ -50,7 +50,7 @@ class Compression(object):
                                         activation=None, name="alpha_plus")
             alp_ = tf.nn.softplus(alp_value, name="alpha_softplus")
             # init noise term
-            G = tf.log(-tf.log(tf.random_uniform([self.batch_size, self.M, self.K], 0, 1, dtype=tf.float32)))
+            G = -tf.log(-tf.log(tf.random_uniform([self.batch_size, self.M, self.K], 0, 1, dtype=tf.float32)))
             alp_log = tf.log(alp_) - G
             if  p.softmax_temperature and p.softmax_temperature != 1:
                 alp_log /= p.softmax_temperature
@@ -73,9 +73,9 @@ class Compression(object):
         # loss = tf.losses.cosine_distance(labels=self.input_placeholder, predictions=target)
         # using vector distance
         loss = tf.reduce_mean(tf.reduce_sum(tf.square(tf.subtract(target, self.input_placeholder)), reduction_indices=1))
-        for v in tf.trainable_variables():
-            if 'bias' not in v.name.lower():
-                loss += p.l2 * tf.nn.l2_loss(v)
+        # for v in tf.trainable_variables():
+        #     if 'bias' not in v.name.lower():
+        #         loss += p.l2 * tf.nn.l2_loss(v)
         
         tf.summary.scalar('loss', loss)
         return loss
