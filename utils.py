@@ -32,7 +32,19 @@ def load_glove(use_index=False):
     return word2vec
 
 
+def validate_path(name):
+    paths = name.split("/")
+    tmp = ""
+    for e, folder in enumerate(paths):
+        tmp += folder
+        if e != 0:
+            tmp += "/"
+        if not path.exists(tmp):
+            os.path.makedirs(tmp)
+
+
 def save_file(name, obj, use_pickle=True):
+    validate_path(name)
     with open(name, 'wb') as f:
         if use_pickle:
             pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)

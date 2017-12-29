@@ -86,17 +86,20 @@ def main(book, word, restore=0, vocabs="", prefix="", decay=False, data=None):
         print('start compressing')
         length = int(len(training_data) * 0.2)
         best_code_words, best_code_words_valid = None, None
+        train_losses, valid_losses = [], []
         for epoch in xrange(p.total_iteration):
             print('Epoch {}'.format(epoch))
             start = time.time()
 
             train_loss, code_words = model.run_epoch(session, training_data, epoch, train_writer)
+            train_losses.append(train_loss)
             print('Training loss: {}'.format(train_loss))
             # run validation after each 1000 iteration
             if (epoch % p.validation_checkpoint) == 0:
                 np.random.shuffle(validation_data)
                 validation_data = validation_data[:length]
                 valid_loss, code_words_valid = model.run_epoch(session, validation_data)
+                valid_losses.append(valid_loss)
                 print('Validation loss: {}'.format(valid_loss))
                 if valid_loss < best_val_loss:
                     best_val_loss = valid_loss
@@ -113,6 +116,7 @@ def main(book, word, restore=0, vocabs="", prefix="", decay=False, data=None):
             code_words_valid_str = stringify_code_words(code_words_valid)
             utils.save_file("weights/%s_code_words_training.txt" % prefix, code_words_str, use_pickle=False)
             utils.save_file("weights/%s_code_words_valid.txt" % prefix, code_words_valid_str, use_pickle=False)
+        utils.save_file("logs/%s_losses.txt" % prefix, {"train": train_losses, "valid": valid_losses})
 
 
 if __name__ == "__main__":

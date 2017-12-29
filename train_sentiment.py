@@ -144,6 +144,8 @@ def main(restore=False, b="", w="", prefix=""):
             saver.restore(session, 'weights/%ssentiment.weights' % prefix)
         
         print('==> starting training')
+        train_losses, train_accuracies = [], []
+        val_losses, val_acces = [], []
         for epoch in xrange(p.total_iteration):
             print('Epoch {}'.format(epoch))
             start = time.time()
@@ -151,6 +153,8 @@ def main(restore=False, b="", w="", prefix=""):
             train_loss, train_accuracy = model.run_epoch(
                 session, model.train, epoch, train_writer,
                 train_op=model.train_step, train=True)
+            train_losses.append(train_loss)
+            train_accuracies.append(train_accuracy)
             print('Training loss: {}'.format(train_loss))
             print('Training accuracy: {}'.format(train_accuracy))
             # anneal
@@ -161,6 +165,8 @@ def main(restore=False, b="", w="", prefix=""):
             # validation
             if epoch > p.skip_validation and (epoch % p.validation_checkpoint) == 0:
                 valid_loss, valid_accuracy = model.run_epoch(session, model.valid)
+                val_losses.append(valid_loss)
+                val_acces.append(valid_accuracy)
                 print('Validation loss: {}'.format(valid_loss))
                 print('Validation accuracy: {}'.format(valid_accuracy))
 
@@ -187,6 +193,7 @@ def main(restore=False, b="", w="", prefix=""):
         print('Test accuracy: %.5f' % test_accuracy)
         tmp = "Best validation accuracy: %.5f \n Test accuracy: %.5f" % (best_val_accuracy, test_accuracy)
         utils.save_file("%saccuracy.txt" % prefix, tmp, False)
+        utils.save_file("logs/%slosses.txt", {"train_loss": train_losses, "train_acc": train_accuracies, "valid_loss": val_losses, "valid_acc" : val_acces})
 
 
 if __name__ == "__main__":
