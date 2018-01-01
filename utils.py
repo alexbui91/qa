@@ -35,13 +35,14 @@ def load_glove(use_index=False):
 
 def validate_path(name):
     paths = name.split("/")
+    paths = paths[:-1]
     tmp = ""
-    for e, folder in enumerate(paths):
-        tmp += folder
-        if e != 0:
+    if paths:
+        for e, folder in enumerate(paths):
+            tmp += folder
+            if not path.exists(tmp):
+                os.makedirs(tmp)
             tmp += "/"
-        if not path.exists(tmp):
-            os.path.makedirs(tmp)
 
 
 def save_file(name, obj, use_pickle=True):

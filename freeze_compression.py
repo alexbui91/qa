@@ -70,11 +70,11 @@ class FreezeGraphTest():
             #     output_node = sess.graph.get_tensor_by_name("one_hot")
             #     print
 
-    def get_trained(self, layer="", url="", prefix=""):
+    def get_trained(self, layer="", url="", prefix="", es=None):
         checkpoint_meta = "%s/%s_compression.weights.meta" % (url, prefix)
         checkpoint = "%s/%s_compression.weights" % (url, prefix)
         p = prefix.split('x');
-        model = Compression(M=int(p[0]), K=int(p[1]))
+        model = Compression(M=int(p[0]), K=int(p[1]), embedding_size=es)
         model.init_opts()
         tconfig = tf.ConfigProto(allow_soft_placement=True)
 
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     parse.add_argument("-u2", '--url2')
     parse.add_argument("-p", '--prefix')
     parse.add_argument("-f", '--folder', type=int, default=0)
-
+    parse.add_argument("-es", "--embedding_size", type=int, default=50)
 
     args = parse.parse_args()
 
@@ -116,10 +116,10 @@ if __name__ == "__main__":
         if args.url2:
             path = args.url2
         for n in name:
-            code_book = fc.get_trained("code_book", args.url, n)
+            code_book = fc.get_trained("code_book", args.url, n, args.embedding_size)
             print(np.shape(code_book))
             utils.save_file("%s/%s_code_book.pkl" % (path, n), code_book)
             tf.reset_default_graph()
     else:
-        code_book = fc.get_trained("code_book", args.url, args.prefix)
+        code_book = fc.get_trained("code_book", args.url, args.prefix, args.embedding_size)
         utils.save_file("%s/%s_code_book.pkl" % (args.url, args.prefix), code_book)
