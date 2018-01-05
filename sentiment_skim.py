@@ -145,14 +145,17 @@ class ModelSentiment():
                 back_cell = BasicLSTMCell(p.embed_size)
             else:
                 back_cell = GRUCell(p.embed_size)
-            _, outputs = tf.nn.bidirectional_dynamic_rnn(
+            outputs, _  = tf.nn.bidirectional_dynamic_rnn(
                 fw_cell,
                 back_cell,
                 inputs, 
                 dtype=np.float32,
                 sequence_length=self.input_len_placeholder,
             )
-            outputs = tf.concat(outputs, axis=1)
+            outputs = tf.concat(outputs, 2)
+            outputs = tf.unstack(outputs, axis=1)
+            outputs = outputs[-1]
+            print(outputs)
 
         return outputs
 
