@@ -77,8 +77,7 @@ class ModelSentiment():
         with tf.variable_scope("input", initializer=tf.contrib.layers.xavier_initializer()):
             print('==> get input representation')
             word_reps = self.get_input_representation(embeddings)
-            if not self.using_bidirection:
-                word_reps = tf.reduce_mean(word_reps, axis=1)
+            word_reps = tf.reduce_mean(word_reps, axis=1)
             # print(word_reps)
 
         with tf.variable_scope("hidden", initializer=tf.contrib.layers.xavier_initializer()):
@@ -152,16 +151,8 @@ class ModelSentiment():
                 dtype=np.float32,
                 sequence_length=self.input_len_placeholder,
             )
-            o_fw = outputs[0]
-            o_bw = outputs[1]
-
-            o_fw = tf.unstack(o_fw, axis=1)
-            o_fw = o_fw[-1]
-
-            o_bw = tf.unstack(o_bw, axis=1)
-            o_bw = o_bw[-1]
             
-            outputs = tf.concat([o_fw, o_bw], 2)
+            outputs = tf.concat(outputs, 2)
 
         return outputs
 
