@@ -15,11 +15,14 @@ import utils
 
 
 def stringify_code_words(code_words):
+    shape = np.shape(code_words)
+    end = shape[0] - 1
     tmp = ""
-    for row in code_words:
+    for i, row in enumerate(code_words):
         for col in row:
             tmp += "%i " % col
-        tmp += "\n"
+        if i < end:
+            tmp += "\n"
     return tmp
 
 

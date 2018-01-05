@@ -90,6 +90,24 @@ class FreezeGraphTest():
                 val = val[0]
                 return val.eval()
 
+    
+    # save code book to text file 
+    # code book input: M x K x H
+    def stringify_code_book(self, code):
+        shape = np.shape(code)
+        length = shape[0] * shape[1]
+        tmp = ""
+        i = 0;
+        for m in code:
+            for k in m:
+                for e in k:
+                    tmp += "%f " % e
+                i += 1
+                if(i < length):
+                    tmp += "\n"
+        return tmp
+
+
 if __name__ == "__main__":
     # test.main()
     parse = argparse.ArgumentParser()
@@ -98,12 +116,13 @@ if __name__ == "__main__":
     parse.add_argument("-p", '--prefix')
     parse.add_argument("-f", '--folder', type=int, default=0)
     parse.add_argument("-es", "--embedding_size", type=int, default=50)
-
+    parse.add_argument("-t", "--to_text", type=int, default=0)
     args = parse.parse_args()
 
     fc = FreezeGraphTest()
     # fc._testFreezeGraph()
     if args.folder:
+        # python freeze_compression.py -es 300 -p 'xxx' -f 1 -u 'directory_to_code_book_folder'
         files = os.listdir(args.url)
         name = []
         for f in files:
@@ -118,8 +137,20 @@ if __name__ == "__main__":
         for n in name:
             code_book = fc.get_trained("code_book", args.url, n, args.embedding_size)
             print(np.shape(code_book))
-            utils.save_file("%s/%s_code_book.pkl" % (path, n), code_book)
+            if args.to_text:
+                tmp = fc.stringify_code_book(code_book)
+                utils.save_file("%s/%s_code_book.txt" % (path, n), tmp, False)
+            else:
+                utils.save_file("%s/%s_code_book.pkl" % (path, n), code_book)
             tf.reset_default_graph()
     else:
+        # python freeze_compression.py -es 300 -p 'xxx' - u 'directory_to_file'
         code_book = fc.get_trained("code_book", args.url, args.prefix, args.embedding_size)
-        utils.save_file("%s/%s_code_book.pkl" % (args.url, args.prefix), code_book)
+        tmp = fc.stringify_code_book(code_book)
+        path = args.url
+        if args.url2:
+            path = args.url2
+        if args.to_text:
+            utils.save_file("%s/%s_code_book.txt" % (path, args.prefix), tmp, use_pickle=False)
+        else:
+            utils.save_file("%s/%s_code_book.pkl" % (path, args.prefix), code_book)

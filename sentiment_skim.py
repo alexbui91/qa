@@ -1,4 +1,4 @@
-from __future__ import print_function
+    from __future__ import print_function
 from __future__ import division
 
 import sys
@@ -8,14 +8,15 @@ import numpy as np
 
 import tensorflow as tf
 
-from tensorflow.contrib.rnn import BasicLSTMCell
+from tensorflow.contrib.rnn import BasicLSTMCell, GRUCell
 
 import properties as p
 
 class ModelSentiment():
 
 
-    def __init__(self, word_embedding=None, max_input_len=None, using_compression=False, book=None, words=None, we_trainable=False, learning_rate = 0.001, lr_decayable=True):
+    def __init__(self, word_embedding=None, max_input_len=None, using_compression=False, book=None, words=None, we_trainable=False, 
+                learning_rate = 0.001, lr_decayable=True, using_bidirection=False, fw_cell='basic', bw_cell='gru'):
         self.word_embedding = word_embedding
         self.we_trainable = we_trainable
         self.max_input_len = max_input_len
@@ -24,6 +25,9 @@ class ModelSentiment():
         self.words = words
         self.learning_rate = learning_rate
         self.lr_decayable = lr_decayable
+        self.using_bidirection = using_bidirection
+        self.fw_cell = fw_cell
+        self.bw_cell = bw_cell
 
     def set_data(self, train, valid):
         self.train = train
@@ -123,14 +127,32 @@ class ModelSentiment():
         # inputs = tf.reshape(tf.reshape(inputs, [-1]), [p.batch_size, chunking_len, p.fixation * p.embed_size])
         # use encoding to get sentence representation plus position encoding
         # (like fb represent)
-        gru_cell = BasicLSTMCell(p.embed_size)
-        # outputs with [batch_size, max_time, cell_bw.output_size]
-        outputs, _ = tf.nn.dynamic_rnn(
-            gru_cell,
-            inputs,
-            dtype=np.float32,
-            sequence_length=self.input_len_placeholder,
-        )
+        if self.fw_cell == 'basic':
+            fw_cell = BasicLSTMCell(p.embed_size)
+        else:
+            fw_cell = GRUCell(p.embed_size)
+        if !self.using_bidirection:
+            # outputs with [batch_size, max_time, cell_bw.output_size]
+            outputs, _ = tf.nn.dynamic_rnn(
+                fw_cell,
+                inputs,
+                dtype=np.float32,
+                sequence_length=self.input_len_placeholder,
+                name='input_representation'
+            )
+        else:
+            if self.bw_cell == 'basic':
+                back_cell = BasicLSTMCell(p.embed_size)
+            else:
+                back_cell = GRUCell(p.embed_size)
+            outputs, _ = tf.nn.bidirectional_dynamic_rnn(
+                fw_cell,
+                back_cell,
+                inputs, 
+                dtype=np.float32,
+                sequence_length=self.input_len_placeholder,
+                name='input_representation'
+            )
 
         return outputs
 

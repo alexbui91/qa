@@ -62,7 +62,7 @@ def load_code_words(url):
     return book
 
 
-def main(restore=False, b="", w="", prefix=""):
+def main(restore=False, b="", w="", prefix="", using_bidirection=False, forward_cell='', backward_cell=''):
     if prefix:
         prefix = prefix +  "_";
     word_embedding = None
@@ -101,7 +101,7 @@ def main(restore=False, b="", w="", prefix=""):
         raise ValueError("%s is not existed" % p.sentiment_embedding_path)
     
         # config.strong_supervision = True
-    model = ModelSentiment(np.array(word_embedding), p.max_imdb_sent, using_compression, book, words, False, p.lr, False)
+    model = ModelSentiment(np.array(word_embedding), p.max_imdb_sent, using_compression, book, words, False, p.lr, False, using_bidirection, forward_cell, backward_cell)
     
     data = utils.load_file(p.dataset_imdb)
     train = data['train']
@@ -206,6 +206,9 @@ if __name__ == "__main__":
     parser.add_argument("-ws", "--word_size", type=int, default=64)
 
     parser.add_argument("-p", "--prefix", help="prefix to save weighted files")
+    parser.add_argument("-fw", "--forward_cell", default='basic')
+    parser.add_argument("-bw", "--backward_cell", default='basic')
+    parser.add_argument("-bd", "--bidirection", type=int)
 
     args = parser.parse_args()
     p.book_size = args.book_size
@@ -213,5 +216,5 @@ if __name__ == "__main__":
 
     if not args.prefix:
         args.prefix = "%sx%s" % (args.book_size, args.word_size)
-    main(args.restore, args.book, args.word, args.prefix)
+    main(args.restore, args.book, args.word, args.prefix, args.bidirection, args.forward_cell, args.backward_cell)
     
