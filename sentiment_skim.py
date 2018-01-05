@@ -77,7 +77,8 @@ class ModelSentiment():
         with tf.variable_scope("input", initializer=tf.contrib.layers.xavier_initializer()):
             print('==> get input representation')
             word_reps = self.get_input_representation(embeddings)
-            word_reps = tf.reduce_mean(word_reps, axis=1)
+            if not self.using_bidirection:
+                word_reps = tf.reduce_mean(word_reps, axis=1)
             # print(word_reps)
 
         with tf.variable_scope("hidden", initializer=tf.contrib.layers.xavier_initializer()):
@@ -131,7 +132,7 @@ class ModelSentiment():
             fw_cell = BasicLSTMCell(p.embed_size)
         else:
             fw_cell = GRUCell(p.embed_size)
-        if !self.using_bidirection:
+        if not self.using_bidirection:
             # outputs with [batch_size, max_time, cell_bw.output_size]
             outputs, _ = tf.nn.dynamic_rnn(
                 fw_cell,
@@ -144,7 +145,7 @@ class ModelSentiment():
                 back_cell = BasicLSTMCell(p.embed_size)
             else:
                 back_cell = GRUCell(p.embed_size)
-            outputs, _ = tf.nn.bidirectional_dynamic_rnn(
+            _, outputs = tf.nn.bidirectional_dynamic_rnn(
                 fw_cell,
                 back_cell,
                 inputs, 
