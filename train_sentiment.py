@@ -197,6 +197,8 @@ def main(restore=False, b="", w="", prefix="", using_bidirection=False, forward_
 
 
 if __name__ == "__main__":
+    # python train_sentiment.py -b weights/8x8_code_book.pkl -w weights/8x8_code_words_training.txt -bs 8 -ws 8 -p '8x8_'
+    # python train_sentiment.py -p 'aaa' -bd 1 -fw 'basic' -bw 'basic'
     parser = argparse.ArgumentParser()
     parser.add_argument("-r", "--restore", help="restore previously trained weights (default=false)", type=int)
     

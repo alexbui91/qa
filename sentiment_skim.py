@@ -1,4 +1,4 @@
-    from __future__ import print_function
+from __future__ import print_function
 from __future__ import division
 
 import sys
@@ -15,7 +15,7 @@ import properties as p
 class ModelSentiment():
 
 
-    def __init__(self, word_embedding=None, max_input_len=None, using_compression=False, book=None, words=None, we_trainable=False, 
+    def __init__(self, word_embedding=None, max_input_len=None, using_compression=False, book=None, words=None, we_trainable=False, \
                 learning_rate = 0.001, lr_decayable=True, using_bidirection=False, fw_cell='basic', bw_cell='gru'):
         self.word_embedding = word_embedding
         self.we_trainable = we_trainable
@@ -138,7 +138,6 @@ class ModelSentiment():
                 inputs,
                 dtype=np.float32,
                 sequence_length=self.input_len_placeholder,
-                name='input_representation'
             )
         else:
             if self.bw_cell == 'basic':
@@ -151,8 +150,8 @@ class ModelSentiment():
                 inputs, 
                 dtype=np.float32,
                 sequence_length=self.input_len_placeholder,
-                name='input_representation'
             )
+            outputs = tf.concat(outputs, axis=1)
 
         return outputs
 
