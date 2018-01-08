@@ -62,7 +62,7 @@ def load_code_words(url):
     return book
 
 
-def main(restore=False, b="", w="", prefix="", lr_decayable=False, using_bidirection=False, forward_cell='', backward_cell=''):
+def main(restore=False, b="", w="", prefix="", using_bidirection=False, forward_cell='', backward_cell=''):
     if prefix:
         prefix = prefix +  "_";
     word_embedding = None
@@ -197,8 +197,8 @@ def main(restore=False, b="", w="", prefix="", lr_decayable=False, using_bidirec
 
 
 if __name__ == "__main__":
-    # python train_sentiment.py -dc 1 -b weights/8x8_code_book.pkl -w weights/8x8_code_words_training.txt -bs 8 -ws 8 -p '8x8_'
-    # python train_sentiment.py -dc 1 -p 'aaa' -bd 1 -fw 'basic' -bw 'basic'
+    # python train_sentiment.py -b weights/8x8_code_book.pkl -w weights/8x8_code_words_training.txt -bs 8 -ws 8 -p '8x8_'
+    # python train_sentiment.py -p 'aaa' -bd 1 -fw 'basic' -bw 'basic'
     parser = argparse.ArgumentParser()
     parser.add_argument("-r", "--restore", help="restore previously trained weights (default=false)", type=int)
     
@@ -211,7 +211,6 @@ if __name__ == "__main__":
     parser.add_argument("-fw", "--forward_cell", default='basic')
     parser.add_argument("-bw", "--backward_cell", default='basic')
     parser.add_argument("-bd", "--bidirection", type=int)
-    parser.add_argument("-dc", "--lr_decayable", type=int)
 
     args = parser.parse_args()
     p.book_size = args.book_size
@@ -219,5 +218,5 @@ if __name__ == "__main__":
 
     if not args.prefix:
         args.prefix = "%sx%s" % (args.book_size, args.word_size)
-    main(args.restore, args.book, args.word, args.prefix, args.lr_decayable, args.bidirection, args.forward_cell, args.backward_cell)
+    main(args.restore, args.book, args.word, args.prefix, args.bidirection, args.forward_cell, args.backward_cell)
     
